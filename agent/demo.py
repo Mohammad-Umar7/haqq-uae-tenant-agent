@@ -4,6 +4,11 @@ This is a *workflow*, not an agent: the order of steps is hard-coded below.
 Compare it with loop.py, where Claude chooses the steps. Demo mode exists so
 the app is useful (and judge-able) without an API key, and it doubles as an
 end-to-end test of the tools.
+
+The code-only members of the team still work here: the Contract Analyst's
+regex reader, the Calculators, the Law Researcher's BM25 search, the
+Drafter's template and the Critic's automatic check. Only the Claude calls
+(the Orchestrator, the Critic's review and the Drafter's revision) are off.
 """
 
 from __future__ import annotations
@@ -16,6 +21,10 @@ from agent.dates import long_date
 from agent.inputs import TenantInputs
 from agent.knowledge import DISCLAIMER, citation_for
 from agent.registry import ToolContext, ToolOutcome, execute_tool
+from agent.roster import CRITIC, agent_for_tool
+from agent.team.case_file import build_case_file, case_file_text
+from agent.team.checks import check_letter, known_facts
+from agent.team.drafting import automatic_check_event
 from agent.trace import TraceEvent
 
 DEMO_BANNER = (
@@ -26,13 +35,16 @@ DEMO_BANNER = (
 
 def _run(name: str, args: dict[str, Any], ctx: ToolContext, events: list[TraceEvent]) -> ToolOutcome:
     """Run one tool and record call + result events, exactly like the LLM loop does."""
-    events.append(TraceEvent("tool_call", name, detail=args))
+    agent = agent_for_tool(name)
+    events.append(TraceEvent("tool_call", name, detail=args, agent=agent))
     t0 = time.perf_counter()
     outcome = execute_tool(name, args, ctx)
+    if not outcome.is_error:
+        ctx.record(name, outcome.output)
     events.append(
         TraceEvent(
             "tool_result", name, detail=outcome.output, is_error=outcome.is_error,
-            rule_ids=outcome.rule_ids, duration_ms=int((time.perf_counter() - t0) * 1000),
+            rule_ids=outcome.rule_ids, duration_ms=int((time.perf_counter() - t0) * 1000), agent=agent,
         )
     )
     return outcome
@@ -172,7 +184,16 @@ def _maybe_draft_letter(ctx, terms, scan_out, rent_out, notice_out, inputs, even
         "landlord_name": terms.get("landlord") or "",
         "property_address": terms.get("property") or "",
     }
-    return _run("draft_letter", args, ctx, events).output
+    letter = _run("draft_letter", args, ctx, events).output
+    if "body" in letter:
+        # The Critic's free half: every amount, date and citation must be in the case file.
+        case = build_case_file(ctx, extra_rule_ids=letter["rule_ids"])
+        problems = check_letter(letter["body"], known_facts(case_file_text(case), case["allowed_citations"]))
+        events.append(automatic_check_event(problems, "the letter"))
+        events.append(TraceEvent("info", "Critic's Claude review skipped (demo mode)", agent=CRITIC, detail=(
+            "With an API key, the Critic also reads the letter as the landlord's lawyer and the Drafter "
+            "revises it once.")))
+    return letter
 
 
 def _money(x: float | None) -> str:

@@ -102,24 +102,36 @@ class UsageMeter:
     requests: int = 0
     cost_usd: float = 0.0           # exact, using the price table
     guard_cost_usd: float = 0.0     # what the spend guard compares against
+    # agent name -> {"requests", "tokens", "cost_usd"}: who spent what.
+    by_agent: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @property
     def price(self) -> Price | None:
         return PRICES.get(self.model)
 
-    def add(self, usage: Any) -> None:
-        """Record one API response's usage."""
+    def add(self, usage: Any, agent: str = "Orchestrator") -> float:
+        """Record one API response's usage; returns what that call cost (USD).
+
+        `agent` says which member of the team made the call, so the trace
+        can show the cost of each agent (see by_agent).
+        """
         u = usage_dict(usage)
         for f in _FIELDS:
             self.totals[f] += u[f]
         self.requests += 1
         price = self.price
+        cost = 0.0
         if price is not None:
             cost = request_cost_usd(u, price, self.batch)
             self.cost_usd += cost
             self.guard_cost_usd += cost
         else:
             self.guard_cost_usd += request_cost_usd(u, CONSERVATIVE_PRICE, self.batch)
+        row = self.by_agent.setdefault(agent, {"requests": 0, "tokens": 0, "cost_usd": 0.0})
+        row["requests"] += 1
+        row["tokens"] += sum(u.values())
+        row["cost_usd"] += cost
+        return cost
 
     def add_meter(self, other: "UsageMeter") -> None:
         for f in _FIELDS:
@@ -127,6 +139,10 @@ class UsageMeter:
         self.requests += other.requests
         self.cost_usd += other.cost_usd
         self.guard_cost_usd += other.guard_cost_usd
+        for agent, row in other.by_agent.items():
+            mine = self.by_agent.setdefault(agent, {"requests": 0, "tokens": 0, "cost_usd": 0.0})
+            for key in mine:
+                mine[key] += row[key]
 
     @property
     def prompt_tokens(self) -> int:
@@ -157,4 +173,15 @@ class UsageMeter:
             "requests": self.requests,
             "cost_usd": round(self.cost_usd, 6) if self.price is not None else None,
             "cache_share": round(self.cache_share, 3),
+            "by_agent": {name: {**row, "cost_usd": round(row["cost_usd"], 6)} for name, row in self.by_agent.items()},
         }
+
+    def by_agent_markdown(self) -> str:
+        """A small table for the trace: which agent made how many Claude calls, at what cost."""
+        if not self.by_agent:
+            return ""
+        rows = ["| Agent | Claude calls | Tokens | Cost |", "|---|---|---|---|"]
+        for name, row in self.by_agent.items():
+            cost = format_usd(row["cost_usd"]) if self.price is not None else "?"
+            rows.append(f"| {name} | {row['requests']} | {row['tokens']:,} | {cost} |")
+        return "\n".join(rows)

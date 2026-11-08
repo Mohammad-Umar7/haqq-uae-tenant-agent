@@ -15,10 +15,11 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Callable
 
+from agent.inputs import TenantInputs
 from agent.knowledge import rule_ids as known_rule_ids
 from agent.tools import (
     clause_risk_scan,
@@ -40,11 +41,22 @@ class ToolContext:
     which saves tokens and stops the model from "editing" the contract.
     `contract_terms` holds the read-once extraction (LLM mode); when it is
     None, extract_contract_terms falls back to regex on `contract_text`.
+
+    `evidence` collects every tool result of the session (the Orchestrator's
+    loop records them). The Critic checks the draft letter against it: a
+    number in the letter that no tool produced is a red flag.
     """
 
     contract_text: str | None
     today: date
     contract_terms: dict[str, Any] | None = None
+    inputs: TenantInputs = field(default_factory=TenantInputs)
+    evidence: list[dict[str, Any]] = field(default_factory=list)
+
+    def record(self, tool: str, output: dict[str, Any]) -> None:
+        """Remember a tool result as evidence (letters are never evidence)."""
+        if tool != "draft_letter" and "error" not in output:
+            self.evidence.append({"tool": tool, "output": output})
 
 
 class ToolInputError(ValueError):
@@ -159,12 +171,16 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
     {
         "name": "draft_letter",
         "description": (
-            "Draft a polite, firm letter to the landlord, or an RDSC complaint summary, from a template. "
-            "You supply the facts (short factual statements with dates and AED amounts from tool "
-            "results), the rule_ids you rely on (from tool results, e.g. search_tenancy_law), and "
-            "optionally the request. Citations are filled in from the knowledge base; unknown rule ids "
-            "are dropped and reported in ignored_rule_ids. "
-            "Show the returned body to the tenant and remind them to check it before sending."
+            "Draft a polite, firm letter to the landlord, or an RDSC complaint summary. You supply the "
+            "facts (short factual statements with dates and AED amounts copied from tool results), the "
+            "rule_ids you rely on (from tool results, e.g. search_tenancy_law), and optionally the "
+            "request. The drafting team then works on it: the Drafter fills a template (citations come "
+            "from the knowledge base; unknown rule ids are dropped and reported in ignored_rule_ids), "
+            "the Critic plays the landlord's lawyer and checks every number, date and citation against "
+            "the tool results, and the Drafter revises once (in Arabic too if the tenant asked). The "
+            "final letter is shown to the tenant in the Letter panel: don't paste it into your answer. "
+            "Summarise the Critic's main objections and what changed, and remind the tenant to check "
+            "the letter before sending."
         ),
         "input_schema": {
             "type": "object",

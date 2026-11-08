@@ -44,6 +44,9 @@ class Settings:
     # Free repeats: identical requests are answered from a local cache.
     cache_enabled: bool = True
     cache_dir: Path = DEFAULT_CACHE_DIR
+    # The drafting team: the Critic reviews every letter and the Drafter
+    # revises it once. Off = template letter + the free automatic check only.
+    critic_enabled: bool = True
 
     @property
     def llm_enabled(self) -> bool:
@@ -67,6 +70,13 @@ def _int(name: str, default: int) -> int:
     return max(1, value)
 
 
+def _bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    return raw.strip().lower() not in {"0", "false", "no", "off"}
+
+
 def load_settings() -> Settings:
     api_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or None
     # Treat the placeholder from .env.example as "no key".
@@ -87,6 +97,7 @@ def load_settings() -> Settings:
         max_requests_per_session=_int("HAQQ_MAX_REQUESTS_PER_SESSION", 20),
         max_upload_mb=_float("HAQQ_MAX_UPLOAD_MB", 5.0),
         max_pdf_pages=_int("HAQQ_MAX_PDF_PAGES", 10),
-        cache_enabled=os.getenv("HAQQ_CACHE_ENABLED", "true").strip().lower() not in {"0", "false", "no", "off"},
+        cache_enabled=_bool("HAQQ_CACHE_ENABLED", True),
         cache_dir=Path(cache_dir) if cache_dir else DEFAULT_CACHE_DIR,
+        critic_enabled=_bool("HAQQ_CRITIC_ENABLED", True),
     )

@@ -74,3 +74,15 @@ def test_no_calls_costs_nothing():
 @pytest.mark.parametrize("amount, text", [(0, "$0.00"), (0.00142, "$0.0014"), (0.1234, "$0.123"), (2.5, "$2.50")])
 def test_format_usd(amount, text):
     assert format_usd(amount) == text
+
+
+def test_meter_tracks_cost_per_agent():
+    meter = UsageMeter("claude-haiku-5-5")
+    assert meter.add(u(i=2_000, o=1_000)) == pytest.approx(0.0007)          # default agent: Orchestrator
+    meter.add(u(i=1_000, o=500), agent="Critic")
+    meter.add(u(r=1_000, o=500), agent="Critic")
+    critic = meter.by_agent["Critic"]
+    assert critic["requests"] == 2 and critic["tokens"] == 3_000
+    assert critic["cost_usd"] == pytest.approx((1_000 * 0.10 + 1_000 * 0.01 + 1_000 * 0.50) / 1e6)
+    assert meter.as_dict()["by_agent"]["Orchestrator"]["requests"] == 1
+    assert "| Critic | 2 | 3,000 |" in meter.by_agent_markdown()

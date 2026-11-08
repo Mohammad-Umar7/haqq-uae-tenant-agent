@@ -35,8 +35,10 @@ def test_demo_runs_the_fixed_pipeline_on_the_sample(sample_text):
     assert "Art. 14" in report
 
     trace = render_trace_markdown(events)
-    assert "Called tool `clause_risk_scan`" in trace
+    assert "[Contract Analyst] Called tool `clause_risk_scan`" in trace
     assert "Rules consulted" in trace
+    # The code-only half of the Critic runs in demo mode too, and the template letter passes it.
+    assert any(e.agent == "Critic" and "every amount, date and citation is in the case file" in e.title for e in events)
 
 
 def test_demo_without_rera_figure_skips_the_calculator(sample_text):

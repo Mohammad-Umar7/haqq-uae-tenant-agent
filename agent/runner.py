@@ -44,6 +44,8 @@ from agent.law_search import LAW_PATH
 from agent.prompts import SYSTEM_PROMPT, build_user_message
 from agent.registry import TOOL_SCHEMAS, ToolContext
 from agent.result_cache import ResultCache, event_from_dict, event_to_dict, make_key
+from agent.roster import CONTRACT_ANALYST
+from agent.team.prompts import CRITIC_TASK, TEAM_REPLY_SCHEMA, TEAM_SYSTEM, drafter_task
 from agent.trace import TraceEvent
 
 # Anything that changes how an answer is produced is part of the cache key,
@@ -56,6 +58,7 @@ PROMPT_FINGERPRINT = make_key(
     EXTRACTION_FINGERPRINT,
     LAW_PATH.read_bytes(),
     KB_PATH.read_bytes(),
+    TEAM_SYSTEM, CRITIC_TASK, drafter_task([], []), json.dumps(TEAM_REPLY_SCHEMA, sort_keys=True),
 )
 
 
@@ -68,6 +71,7 @@ class Session:
     rendered_text: str | None = None                  # text rebuilt from a scanned/Arabic PDF
     messages: list[dict[str, Any]] = field(default_factory=list)   # Claude conversation history
     llm_requests: int = 0                             # for the per-session request limit
+    evidence: list[dict[str, Any]] = field(default_factory=list)   # tool results (the Critic's case file)
 
     @property
     def contract_text(self) -> str | None:
@@ -102,7 +106,7 @@ def _read_contract_once(session: Session, client: Any, settings: Settings, cache
     key = make_key("extract", EXTRACTION_FINGERPRINT, settings.model, contract.raw_bytes)
     cached = cache.get(key) if cache else None
     source = "the PDF (document block)" if contract.needs_document_block else "the contract text"
-    yield TraceEvent("tool_call", "read_contract_once", detail={
+    yield TraceEvent("tool_call", "read_contract_once", agent=CONTRACT_ANALYST, detail={
         "model": settings.model, "reads": source, "output": "JSON schema (structured outputs)",
         "cached": bool(cached),
     })
@@ -116,7 +120,8 @@ def _read_contract_once(session: Session, client: Any, settings: Settings, cache
             detail = str(exc) if isinstance(exc, ExtractionError) else f"{type(exc).__name__}: {exc}"
             fallback = ("Using the regex reader instead." if contract.text
                         else "This PDF has no text layer, so there is nothing to fall back on.")
-            yield TraceEvent("error", "Couldn't read the contract with Claude", detail=f"{detail} {fallback}", is_error=True)
+            yield TraceEvent("error", "Couldn't read the contract with Claude", detail=f"{detail} {fallback}",
+                             is_error=True, agent=CONTRACT_ANALYST)
             return
         if cache:
             cache.put(key, {"extraction": extraction.model_dump(mode="json")})
@@ -124,9 +129,11 @@ def _read_contract_once(session: Session, client: Any, settings: Settings, cache
     session.extraction_output = output
     if contract.text is None:
         session.rendered_text = render_contract_text(extraction)
-    yield TraceEvent("tool_result", "read_contract_once", detail=_summary_of(output), duration_ms=int((time.perf_counter() - t0) * 1000))
+    yield TraceEvent("tool_result", "read_contract_once", detail=_summary_of(output),
+                     duration_ms=int((time.perf_counter() - t0) * 1000), agent=CONTRACT_ANALYST)
     if not extraction.is_tenancy_contract:
-        yield TraceEvent("error", "This may not be a tenancy contract", detail="Claude's extraction flagged it; check the upload.", is_error=True)
+        yield TraceEvent("error", "This may not be a tenancy contract", detail="Claude's extraction flagged it; check the upload.",
+                         is_error=True, agent=CONTRACT_ANALYST)
 
 
 def _replay(hit: dict[str, Any]) -> Iterator[TraceEvent]:
@@ -157,7 +164,7 @@ def run_turn(
 ) -> Iterator[TraceEvent]:
     """Run one turn and yield trace events; the last one is kind="final"."""
     if agent is None:   # demo mode: free, deterministic, no limits needed
-        ctx = ToolContext(contract_text=session.contract_text, today=today)
+        ctx = ToolContext(contract_text=session.contract_text, today=today, inputs=inputs)
         stream = run_demo_analysis(ctx, inputs) if analyze else answer_demo_question(user_text, ctx)
         for event in stream:
             if event.kind == "final":
@@ -185,6 +192,7 @@ def run_turn(
         if (hit := cache.get(key)) is not None:
             session.extraction_output = hit.get("extraction_output") or session.extraction_output
             session.rendered_text = hit.get("rendered_text") or session.rendered_text
+            session.evidence += hit.get("evidence") or []
             # Plain-text history, so a follow-up question still has context.
             session.messages += [{"role": "user", "content": content}, {"role": "assistant", "content": hit["text"]}]
             yield from _replay(hit)
@@ -205,7 +213,8 @@ def run_turn(
             return
 
     # 4. The agent loop.
-    ctx = ToolContext(contract_text=session.contract_text, today=today, contract_terms=session.extraction_output)
+    ctx = ToolContext(contract_text=session.contract_text, today=today, contract_terms=session.extraction_output,
+                      inputs=inputs, evidence=session.evidence)   # the same list: evidence carries over turns
     for event in agent.run(session.messages, content, ctx, meter=meter):
         events.append(event)
         yield event
@@ -219,5 +228,6 @@ def run_turn(
             "events": [event_to_dict(e) for e in events if e.kind != "final"],
             "extraction_output": session.extraction_output,
             "rendered_text": session.rendered_text,
+            "evidence": session.evidence,
             "model": settings.model,
         })

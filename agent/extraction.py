@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from agent.contract import Clause, LoadedContract, split_clauses
 from agent.dates import parse_date
+from agent.roster import CONTRACT_ANALYST
 from agent.tools.clause_scan import RED_FLAGS
 from agent.tools.extract import regex_terms, summarize_terms
 
@@ -239,7 +240,7 @@ def extract_with_claude(client: Any, contract: LoadedContract, model: str, meter
     """
     response = client.messages.create(**build_extraction_params(contract, model))
     if meter is not None:
-        meter.add(getattr(response, "usage", None))
+        meter.add(getattr(response, "usage", None), agent=CONTRACT_ANALYST)
     return parse_extraction(response)
 
 

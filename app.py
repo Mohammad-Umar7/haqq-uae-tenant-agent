@@ -23,8 +23,9 @@ from agent.knowledge import DISCLAIMER
 from agent.loop import TenantAgent
 from agent.prompts import ANALYZE_REQUEST
 from agent.result_cache import ResultCache
+from agent.roster import ROSTER
 from agent.runner import Session, run_turn
-from agent.trace import TraceEvent, render_trace_markdown
+from agent.trace import TraceEvent, latest_letter, render_trace_markdown
 
 SAMPLE_PATH = Path(__file__).parent / "samples" / "sample_contract.txt"
 
@@ -60,15 +61,15 @@ def load_contract(file_path: str | None, pasted: str, session: Session):
         elif pasted and pasted.strip():
             contract = LoadedContract.from_text(pasted, "pasted text")
         else:
-            return session, "_Upload a PDF/TXT or paste the contract text first._", gr.update(), gr.update()
+            return session, "_Upload a PDF/TXT or paste the contract text first._", gr.update(), gr.update(), gr.update()
     except ContractLoadError as exc:
-        return session, f"**Couldn't load the contract:** {exc}", gr.update(), gr.update()
+        return session, f"**Couldn't load the contract:** {exc}", gr.update(), gr.update(), gr.update()
     except Exception as exc:  # e.g. a corrupt PDF
-        return session, f"**Couldn't read that file:** {type(exc).__name__}: {exc}", gr.update(), gr.update()
+        return session, f"**Couldn't read that file:** {type(exc).__name__}: {exc}", gr.update(), gr.update(), gr.update()
 
     # A new contract starts a fresh conversation (the request count carries over).
     new_session = Session(contract=contract, llm_requests=session.llm_requests)
-    return new_session, _loaded_status(contract), [], render_trace_markdown([])
+    return new_session, _loaded_status(contract), [], render_trace_markdown([]), ""
 
 
 def load_sample(session: Session):
@@ -80,6 +81,7 @@ def load_sample(session: Session):
         _loaded_status(contract),
         [],
         render_trace_markdown([]),
+        "",                # no letter yet
         100_000,           # RERA average for a similar 1BR (made-up demo figure)
         93_500,            # landlord asks for +10%
         "rent_increase",
@@ -97,6 +99,7 @@ def _run_turn(user_text: str, display_text: str, analyze: bool, session: Session
         {"role": "assistant", "content": "_Working..._"},
     ]
     events: list[TraceEvent] = []
+    letter_out = gr.update()      # the Letter panel changes only when the team writes a letter
     stream = run_turn(
         session, user_text, analyze=analyze, inputs=inputs, today=date.today(),
         settings=settings, agent=agent, cache=cache,
@@ -111,8 +114,10 @@ def _run_turn(user_text: str, display_text: str, analyze: bool, session: Session
         else:
             events.append(event)
             calls = sum(1 for e in events if e.kind == "tool_call")
-            chat[-1]["content"] = f"_Working... {calls} tool call(s) so far (latest: {event.title})_"
-        yield chat, render_trace_markdown(events), session
+            chat[-1]["content"] = f"_Working... {calls} step(s) so far (latest: {event.agent}, {event.title})_"
+            if (letter := latest_letter([event])) is not None:
+                letter_out = letter["body"]
+        yield chat, render_trace_markdown(events), session, letter_out
 
 
 def analyze(session, chat, rera, proposed, notice_type, notice_date, method):
@@ -122,15 +127,15 @@ def analyze(session, chat, rera, proposed, notice_type, notice_date, method):
 
 def chat_submit(message, session, chat, rera, proposed, notice_type, notice_date, method):
     if not message or not message.strip():
-        yield chat, gr.update(), session, ""
+        yield chat, gr.update(), session, gr.update(), ""
         return
     inputs = TenantInputs.from_form(rera, proposed, notice_date, notice_type, method)
-    for chat_out, trace_out, session_out in _run_turn(message, message, False, session, chat, inputs):
-        yield chat_out, trace_out, session_out, ""
+    for chat_out, trace_out, session_out, letter_out in _run_turn(message, message, False, session, chat, inputs):
+        yield chat_out, trace_out, session_out, letter_out, ""
 
 
 def new_conversation(session: Session):
-    return session.fresh_conversation(), [], render_trace_markdown([])
+    return session.fresh_conversation(), [], render_trace_markdown([]), ""
 
 
 # ----------------------------------------------------------------------- UI --
@@ -138,21 +143,26 @@ def new_conversation(session: Session):
 if settings.llm_enabled:
     MODE_MD = (
         f"**LLM mode** - model `{settings.model}`, effort `{settings.effort}`. "
-        "Claude decides which tools to call; open *What the agent did* to watch, including what each "
-        f"analysis cost. Spend limit: {format_usd(settings.max_cost_per_run_usd)} per analysis, "
+        "The Orchestrator (Claude) decides which specialist to ask; every letter is attacked by the Critic "
+        "(the landlord's lawyer) and revised once. Open *What the agents did* to watch, including what each "
+        f"agent cost. Spend limit: {format_usd(settings.max_cost_per_run_usd)} per analysis (all agents together), "
         f"{settings.max_requests_per_session} questions per session."
     )
 else:
     MODE_MD = (
-        "**Demo mode - the LLM is off.** No `ANTHROPIC_API_KEY` was found, so the tools run in a "
-        "fixed order and chat searches the official law text (BM25, no AI). Add a key to `.env` to "
-        "enable the agent."
+        "**Demo mode - the LLM is off.** No `ANTHROPIC_API_KEY` was found, so the code-only specialists "
+        "run in a fixed order (the Critic does its automatic check only) and chat searches the official "
+        "law text (BM25, no AI). Add a key to `.env` to enable the Claude agents."
     )
 
 CSS = """
 .disclaimer {border-left: 4px solid #d97706; padding: 6px 12px; background: rgba(217,119,6,0.08); border-radius: 4px;}
 .mode {border-left: 4px solid #2563eb; padding: 6px 12px; background: rgba(37,99,235,0.08); border-radius: 4px;}
 """
+
+TEAM_MD = "| Agent | How it works | Job |\n|---|---|---|\n" + "\n".join(
+    f"| **{name}** | {how} | {job} |" for name, (how, job) in ROSTER.items()
+)
 
 NOTICE_TYPES = [
     ("No notice yet / not sure", "none"),
@@ -225,23 +235,32 @@ with gr.Blocks(title="Haqq - Dubai Tenant Rights Agent") as demo:
                 ],
                 inputs=msg_in,
             )
-            with gr.Accordion("What the agent did", open=False):
+            letter_box = gr.Textbox(
+                label="Letter to your landlord (draft: check every fact before sending)",
+                lines=12, buttons=["copy"], interactive=True,
+                placeholder="When the team drafts a letter (Drafter, then the Critic's review, then one revision), it appears here.",
+            )
+            with gr.Accordion("What the agents did", open=False):
                 trace_md = gr.Markdown(render_trace_markdown([]))
+            with gr.Accordion("Meet the team", open=False):
+                gr.Markdown(TEAM_MD)
             reset_btn = gr.Button("New conversation", size="sm")
 
     # --- wiring: which function runs on which click, with which inputs/outputs ---
     form_inputs = [rera_in, proposed_in, notice_type_in, notice_date_in, method_in]
     no_file = gr.State(None)  # "Use pasted text" ignores any uploaded file
 
-    file_in.upload(load_contract, [file_in, pasted_in, session_state], [session_state, contract_status, chatbot, trace_md])
-    use_btn.click(load_contract, [no_file, pasted_in, session_state], [session_state, contract_status, chatbot, trace_md])
+    loaded = [session_state, contract_status, chatbot, trace_md, letter_box]
+    file_in.upload(load_contract, [file_in, pasted_in, session_state], loaded)
+    use_btn.click(load_contract, [no_file, pasted_in, session_state], loaded)
     sample_btn.click(
         load_sample, [session_state],
-        [session_state, contract_status, chatbot, trace_md, rera_in, proposed_in, notice_type_in, notice_date_in, method_in],
+        [*loaded, rera_in, proposed_in, notice_type_in, notice_date_in, method_in],
     )
-    analyze_btn.click(analyze, [session_state, chatbot, *form_inputs], [chatbot, trace_md, session_state])
-    msg_in.submit(chat_submit, [msg_in, session_state, chatbot, *form_inputs], [chatbot, trace_md, session_state, msg_in])
-    reset_btn.click(new_conversation, [session_state], [session_state, chatbot, trace_md])
+    analyze_btn.click(analyze, [session_state, chatbot, *form_inputs], [chatbot, trace_md, session_state, letter_box])
+    msg_in.submit(chat_submit, [msg_in, session_state, chatbot, *form_inputs],
+                  [chatbot, trace_md, session_state, letter_box, msg_in])
+    reset_btn.click(new_conversation, [session_state], [session_state, chatbot, trace_md, letter_box])
 
 
 if __name__ == "__main__":

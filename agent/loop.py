@@ -17,6 +17,12 @@ the UI to display live.
 Cost control lives here too: a UsageMeter adds up `usage` from every
 response, and the loop stops gracefully once a run has spent
 Settings.max_cost_per_run_usd (checked before each new API call).
+
+This loop is the Orchestrator of a small team (agent/roster.py). Most tools
+are plain code, but draft_letter is delegated to the drafting team
+(agent/team/drafting.py: Drafter -> Critic -> Drafter), which makes its own
+focused Claude calls on the same meter, so the spend limit covers them too.
+Before the answer goes out, the Law Researcher checks its citations.
 """
 
 from __future__ import annotations
@@ -29,9 +35,12 @@ from typing import Any
 import anthropic
 
 from agent.config import Settings
-from agent.cost import UsageMeter, format_usd
+from agent.cost import UsageMeter, format_usd, usage_dict
 from agent.prompts import SYSTEM_BLOCKS
 from agent.registry import TOOL_SCHEMAS, ToolContext, execute_tool
+from agent.roster import LAW_RESEARCHER, agent_for_tool
+from agent.team.checks import audit_citations
+from agent.team.drafting import run_drafting_team
 from agent.trace import TraceEvent
 
 MAX_TOKENS = 16_000  # per response; thinking counts toward it
@@ -92,9 +101,11 @@ class TenantAgent:
         )
 
     def _finish(self, text: str, meter: UsageMeter) -> Iterator[TraceEvent]:
-        """The last two events of every run: the cost line, then the answer."""
+        """The last events of every run: cost by agent, the cost line, then the answer."""
         summary = meter.summary()
         log.info("%s model=%s usage=%s", summary, self.settings.model, meter.as_dict())
+        if len(meter.by_agent) > 1:
+            yield TraceEvent("info", "Cost by agent", detail=meter.by_agent_markdown())
         yield TraceEvent("info", "Cost", detail=summary)
         yield TraceEvent(
             "final", "answer",
@@ -141,10 +152,14 @@ class TenantAgent:
                 yield from self._finish(message, meter)
                 return
 
-            meter.add(getattr(response, "usage", None))
+            round_cost = meter.add(getattr(response, "usage", None))
+            u = usage_dict(getattr(response, "usage", None))
+            prompt = u["input_tokens"] + u["cache_read_input_tokens"] + u["cache_creation_input_tokens"]
             yield TraceEvent(
                 "info",
                 f"Round {round_number}: Claude replied (stop_reason={response.stop_reason})",
+                detail=(f"This round cost {format_usd(round_cost)}: {prompt:,} prompt tokens "
+                        f"({u['cache_read_input_tokens']:,} from the cache), {u['output_tokens']:,} output tokens."),
                 duration_ms=_ms(started),
             )
 
@@ -179,16 +194,26 @@ class TenantAgent:
             tool_uses = [b for b in response.content if b.type == "tool_use"]
             if not tool_uses:
                 final_text = "\n\n".join(b.text for b in response.content if b.type == "text").strip()
+                final_text = yield from self._check_citations(final_text, ctx)
                 yield from self._finish(final_text or "(no answer)", meter)
                 return
 
             # Run every requested tool. Claude may ask for several at once
             # (parallel tool use); all results go back in ONE user message.
+            # Each tool belongs to a specialist on the team (agent/roster.py).
             tool_results = []
             for block in tool_uses:
-                yield TraceEvent("tool_call", block.name, detail=block.input)
+                agent = agent_for_tool(block.name)
+                yield TraceEvent("tool_call", block.name, detail=block.input, agent=agent)
                 t0 = time.perf_counter()
-                outcome = execute_tool(block.name, block.input, ctx)
+                if block.name == "draft_letter":
+                    # Delegated: the drafting team yields its own trace events
+                    # and returns the reviewed letter as the tool's outcome.
+                    outcome = yield from run_drafting_team(block.input, ctx, self.client, self.settings, meter)
+                else:
+                    outcome = execute_tool(block.name, block.input, ctx)
+                if not outcome.is_error:
+                    ctx.record(block.name, outcome.output)    # evidence for the Critic
                 yield TraceEvent(
                     "tool_result",
                     block.name,
@@ -196,6 +221,7 @@ class TenantAgent:
                     is_error=outcome.is_error,
                     rule_ids=outcome.rule_ids,
                     duration_ms=_ms(t0),
+                    agent=agent,
                 )
                 tool_results.append(
                     {
@@ -211,6 +237,23 @@ class TenantAgent:
                 "Try asking a more specific question.")
         yield TraceEvent("error", "Reached the tool-round limit", is_error=True)
         yield from self._finish(text, meter)
+
+
+    def _check_citations(self, text: str, ctx: ToolContext) -> Iterator[TraceEvent]:
+        """The Law Researcher's last job: every law citation in the answer must
+        have come back from a tool this session. Returns the (annotated) text."""
+        audit = audit_citations(text, ctx.evidence)
+        if not audit["checked"]:
+            return text
+        if audit["not_found"]:
+            yield TraceEvent("info", f"Citation check: {len(audit['not_found'])} of {audit['checked']} citation(s) "
+                             "were not returned by the law search", detail=audit, agent=LAW_RESEARCHER)
+            missing = "; ".join(f"[{c}]" for c in audit["not_found"])
+            return (text + f"\n\n_Citation check: {missing} did not come from this session's law search. "
+                    "Verify it against the official text before relying on it._")
+        yield TraceEvent("info", f"Citation check: all {audit['checked']} citation(s) in the answer came from "
+                         "this session's law search", detail=audit, agent=LAW_RESEARCHER)
+        return text
 
 
 def _describe_api_error(exc: anthropic.APIError, model: str) -> str:
