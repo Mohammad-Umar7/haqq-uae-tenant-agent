@@ -1,0 +1,44 @@
+{
+  "_about": "Draft letters with one planted problem each, for the Critic (the landlord's lawyer). Every letter is the sample case's rent-increase objection, built from the template with the facts below; each case changes one fact or adds one sentence. The session is replayed with the real tools, so the case file is the one the app would build. 'expect' is the kind of problem planted; it counts as caught only when an objection quotes the 'planted' words. The clean letter is the false-alarm check: no wrong_number or wrong_date objection is allowed on it. All names are fictional.",
+  "contract": "../samples/sample_contract.txt",
+  "today": "2026-11-08",
+  "inputs": {"rera_average_rent": 100000, "proposed_new_rent": 93500, "notice_date": "2026-11-01",
+             "notice_type": "rent_increase", "delivery_method": "email"},
+  "session": [
+    ["extract_contract_terms", {}],
+    ["clause_risk_scan", {}],
+    ["rera_rent_increase_check", {"current_annual_rent": 85000, "rera_average_rent": 100000, "proposed_new_rent": 93500}],
+    ["notice_deadline_check", {"contract_end_date": "2027-01-14", "notice_type": "rent_increase", "notice_date": "2026-11-01", "delivery_method": "email"}],
+    ["search_tenancy_law", {"query": "rent_increase_caps"}],
+    ["search_tenancy_law", {"query": "notice_change_terms_90_days"}]
+  ],
+  "letter": {
+    "letter_type": "rent_increase_objection",
+    "rule_ids": ["rent_increase_caps", "rental_index_source", "notice_change_terms_90_days"],
+    "tenant_name": "Ms. Priya Raman",
+    "landlord_name": "Mr. Hamad Saif Al Marri",
+    "property_address": "Apartment 1504, Marina Crest Tower, Dubai Marina, Dubai",
+    "facts": [
+      "Our tenancy contract runs until 14 January 2027 at an annual rent of AED 85,000.",
+      "You have proposed a new annual rent of AED 93,500.",
+      "According to the RERA Rental Index the average rent for similar units is AED 100,000, so my rent is 15.0% below average and the maximum increase is 5% (AED 89,250 per year).",
+      "I received your notice on 1 November 2026, 74 days before the contract expires; the rules require at least 90 days' written notice."
+    ]
+  },
+  "cases": [
+    {"id": "k0_clean", "description": "The correct letter (false-alarm check).", "expect": null},
+    {"id": "k1_wrong_cap_amount", "description": "Maximum rent AED 91,250 instead of AED 89,250.",
+     "replace": ["AED 89,250", "AED 91,250"], "expect": "wrong_number", "planted": "91,250"},
+    {"id": "k2_wrong_notice_date", "description": "Notice received on 1 October 2026 instead of 1 November 2026.",
+     "replace": ["1 November 2026", "1 October 2026"], "expect": "wrong_date", "planted": "1 October 2026"},
+    {"id": "k3_wrong_band", "description": "Says the cap is 10% (AED 93,500) when the 15%-below band allows 5%.",
+     "replace": ["the maximum increase is 5% (AED 89,250 per year)", "the maximum increase is 10% (AED 93,500 per year)"],
+     "expect": "wrong_number", "planted": "10%"},
+    {"id": "k4_threatening_tone", "description": "Adds a threat the landlord's lawyer could use against the tenant.",
+     "add_fact": "If you do not withdraw this increase within 3 days I will report you to the police and post about you on social media.",
+     "expect": "tone", "planted": "police"},
+    {"id": "k5_unsupported_claim", "description": "Claims a rule the law does not contain.",
+     "add_fact": "The law forbids any rent increase for a tenant who has lived in the property for more than one year.",
+     "expect": "unsupported_claim", "planted": "more than one year"}
+  ]
+}

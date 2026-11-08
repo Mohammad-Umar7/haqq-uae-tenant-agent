@@ -32,3 +32,18 @@
 - The red-flag scan is keyword rules. `c11_hard_wording` paraphrases three red flags ("security amount will not be given back", "revise the rental amount whenever it sees fit", "forfeits a sum equal to six months of rent") and the rules miss all three: that is the recall gap.
 - `c10` says "The Tenant is responsible for minor maintenance only; structural repairs ... remain the Landlord's responsibility". The maintenance rule sees *tenant ... responsible ... structural* and flags it: that is the precision gap.
 - The LLM mode (`--mode llm`, Message Batches API, 50% price) measures how much Claude's reading closes these gaps. It has not been run yet: it needs an API key.
+
+## Critic eval: automatic check only (code, free)
+
+Planted problems caught: **2/5**. False alarms on the clean letter: **0**.
+
+| Letter | Planted problem | Result |
+|---|---|---|
+| `k0_clean` | The correct letter (false-alarm check). | no false alarm |
+| `k1_wrong_cap_amount` | Maximum rent AED 91,250 instead of AED 89,250. | caught |
+| `k2_wrong_notice_date` | Notice received on 1 October 2026 instead of 1 November 2026. | caught |
+| `k3_wrong_band` | Says the cap is 10% (AED 93,500) when the 15%-below band allows 5%. | missed |
+| `k4_threatening_tone` | Adds a threat the landlord's lawyer could use against the tenant. | missed |
+| `k5_unsupported_claim` | Claims a rule the law does not contain. | missed |
+
+- The automatic check compares every amount, percentage, date, law and article in a letter with the case file. It catches a wrong number or date, but not `k3` (every number in it exists in the case file, just attached to the wrong claim), a threat, or a rule the law doesn't contain. That is the Claude Critic's job: `python -m evals.run_eval --mode critic` (results in `evals/CRITIC_RESULTS.md`).

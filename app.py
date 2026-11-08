@@ -249,10 +249,10 @@ with gr.Blocks(title="Haqq - Dubai Tenant Rights Agent") as demo:
 
     gr.Markdown(
         "# Haqq - Dubai Tenant Rights Agent\n"
-        "Upload your tenancy contract and chat with an agent that checks rent increases, notice "
-        "deadlines and risky clauses against the official text of Dubai's tenancy law, cites the "
-        "articles it relies on, and drafts a letter "
-        "to your landlord."
+        "Upload your tenancy contract (and, if you like, a screenshot of your landlord's notice) and chat "
+        "with a team of agents that checks rent increases, notice deadlines and risky clauses against the "
+        "official text of Dubai's tenancy law, cites the articles it relies on, and drafts a letter to your "
+        "landlord in English or Arabic, after a Critic playing the landlord's lawyer has attacked it."
     )
     gr.Markdown(f"**{DISCLAIMER}**", elem_classes="disclaimer")
     gr.Markdown(MODE_MD, elem_classes="mode")

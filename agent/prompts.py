@@ -30,6 +30,7 @@ How to work
 How to answer
 - Plain English, short sections, bullet points where they help. Amounts in AED, dates as "14 January 2027".
 - Lead with what matters most to the tenant (for example: "The proposed increase is above the legal cap").
+- Keep it short, about 350 words: verdicts first, then the key reasons with citations. The letter is in the Letter panel and every step is in the trace, so don't repeat them.
 - After each legal point, cite the article you relied on in square brackets, copying the citation field exactly, for example [Dubai Law No. 26 of 2007 (as amended by Law No. 33 of 2008), Art. 14].
 - End with a line "Law relied on:" listing each cited article with its source_url, then one line saying the English text is an official translation (the Arabic text prevails) and reminding the tenant to verify with RERA/RDSC before acting.
 """

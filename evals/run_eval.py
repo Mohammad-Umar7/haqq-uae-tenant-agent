@@ -14,11 +14,17 @@ Two modes:
       measures what the LLM adds: reading the contract and spotting risky
       clauses that keyword rules miss.
 
+  critic (needs ANTHROPIC_API_KEY)
+      The Critic (the landlord's lawyer) reviews draft letters with one
+      planted problem each (evals/critic_cases.json, evals/critic_eval.py).
+      The deterministic run already scores the Critic's free automatic check.
+
 Usage (from the project folder):
     python -m evals.run_eval                              # deterministic scorecard
     python -m evals.run_eval --write evals/RESULTS.md     # ...and save it
     python -m evals.run_eval --mode llm                   # submit a batch and wait
     python -m evals.run_eval --mode llm --batch-id msgbatch_...   # collect an earlier batch
+    python -m evals.run_eval --mode critic --write evals/CRITIC_RESULTS.md
 
 Metrics:
   verdict accuracy   rent within cap? notice on time? delivery method valid?
@@ -49,6 +55,7 @@ from agent.contract import LoadedContract  # noqa: E402
 from agent.cost import UsageMeter  # noqa: E402
 from agent.extraction import ExtractionError, build_extraction_params, parse_extraction  # noqa: E402
 from agent.registry import ToolContext, execute_tool  # noqa: E402
+from evals.critic_eval import render_critic_markdown, run_critic_deterministic, run_critic_llm  # noqa: E402
 
 CASES_PATH = EVALS_DIR / "cases.json"
 RESULTS_PATH = EVALS_DIR / "RESULTS.md"
@@ -220,6 +227,21 @@ def run_deterministic(cases_path: Path = CASES_PATH) -> dict[str, Any]:
     return score(cases, {c.id: predict_deterministic(c, today) for c in cases})
 
 
+CRITIC_NOTES = [
+    "The automatic check compares every amount, percentage, date, law and article in a letter with the case "
+    "file. It catches a wrong number or date, but not `k3` (every number in it exists in the case file, just "
+    "attached to the wrong claim), a threat, or a rule the law doesn't contain. That is the Claude Critic's "
+    "job: `python -m evals.run_eval --mode critic` (results in `evals/CRITIC_RESULTS.md`).",
+]
+
+
+def render_results() -> str:
+    """The whole committed RESULTS.md: the pipeline scorecard, then the Critic's automatic check."""
+    critic = render_critic_markdown(run_critic_deterministic(), "Critic eval: automatic check only (code, free)")
+    return (render_markdown(run_deterministic(), "Eval results: deterministic pipeline (no LLM)", DETERMINISTIC_NOTES)
+            + "\n" + critic + "\n" + "\n".join(f"- {n}" for n in CRITIC_NOTES) + "\n")
+
+
 # ---- LLM mode: Message Batches API ----------------------------------------------
 
 def build_batch_requests(cases: list[Case], model: str) -> list[dict[str, Any]]:
@@ -295,14 +317,32 @@ def run_llm(client: Any, model: str, batch_id: str | None = None, cases_path: Pa
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Score Haqq on synthetic Dubai contracts.")
-    parser.add_argument("--mode", choices=["deterministic", "llm"], default="deterministic")
+    parser.add_argument("--mode", choices=["deterministic", "llm", "critic"], default="deterministic")
     parser.add_argument("--write", type=Path, help="also write the scorecard (markdown) to this file")
     parser.add_argument("--batch-id", help="llm mode: collect an existing batch instead of submitting")
     parser.add_argument("--poll-seconds", type=float, default=30)
     args = parser.parse_args(argv)
 
     if args.mode == "deterministic":
-        text = render_markdown(run_deterministic(), "Eval results: deterministic pipeline (no LLM)", DETERMINISTIC_NOTES)
+        text = render_results()
+    elif args.mode == "critic":
+        import anthropic
+
+        from agent.config import load_settings
+
+        settings = load_settings()
+        if not settings.llm_enabled:
+            print("Critic mode needs ANTHROPIC_API_KEY (in .env or the environment).", file=sys.stderr)
+            return 2
+        result = run_critic_llm(anthropic.Anthropic(api_key=settings.api_key), settings)
+        cost = result["meter"].summary().replace("This analysis", "The whole critic eval")
+        text = (f"# Critic eval: does the landlord's lawyer catch planted mistakes? (`{settings.model}`)\n\n"
+                "Draft letters for the sample case with one planted problem each (`evals/critic_cases.json`). "
+                f"Regenerate with `python -m evals.run_eval --mode critic --write evals/CRITIC_RESULTS.md`. {cost}\n\n"
+                + render_critic_markdown(result["team"], "The Critic as shipped: automatic check + Claude")
+                + "\n" + render_critic_markdown(result["claude_only"], "Claude's review alone (no automatic check)")
+                + "\n## What the Critic said (Claude only)\n\n```json\n"
+                + json.dumps(result["objections"], ensure_ascii=False, indent=1) + "\n```\n")
     else:
         import anthropic
 

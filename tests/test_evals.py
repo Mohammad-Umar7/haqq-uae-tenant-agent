@@ -9,11 +9,11 @@ import pytest
 from fakes import SAMPLE_EXTRACTION, json_reply, reply, usage
 
 from agent.tools.clause_scan import RED_FLAGS
+from evals.critic_eval import load_critic_cases, run_critic_deterministic
 from evals.run_eval import (
-    DETERMINISTIC_NOTES,
     RESULTS_PATH,
     load_cases,
-    render_markdown,
+    render_results,
     run_deterministic,
     run_llm,
 )
@@ -43,8 +43,44 @@ def test_deterministic_scorecard():
 
 
 def test_committed_results_md_is_up_to_date():
-    rendered = render_markdown(run_deterministic(), "Eval results: deterministic pipeline (no LLM)", DETERMINISTIC_NOTES)
-    assert RESULTS_PATH.read_text(encoding="utf-8") == rendered, "run: python -m evals.run_eval --write evals/RESULTS.md"
+    assert RESULTS_PATH.read_text(encoding="utf-8") == render_results(), \
+        "run: python -m evals.run_eval --write evals/RESULTS.md"
+
+
+def test_the_automatic_check_catches_planted_numbers_and_dates_without_false_alarms():
+    card = run_critic_deterministic()
+    results = {r["id"]: r["result"] for r in card["rows"]}
+    assert card["false_alarms"] == 0 and results["k0_clean"] == "no false alarm"
+    assert results["k1_wrong_cap_amount"] == "caught" and results["k2_wrong_notice_date"] == "caught"
+    # Code can't judge a misapplied band, a threat or an invented rule: that's the Claude Critic's job.
+    assert {results[k] for k in ("k3_wrong_band", "k4_threatening_tone", "k5_unsupported_claim")} == {"missed"}
+
+
+def test_critic_cases_plant_exactly_one_change_each():
+    cases, _, case_file = load_critic_cases()
+    clean = next(c for c in cases if c.expect is None).letter
+    for case in cases:
+        if case.expect is not None:
+            assert case.letter != clean and case.planted in case.letter, case.id
+    assert "Dubai Decree No. 43 of 2013, Art. 1" in case_file["allowed_citations"]
+
+
+def test_critic_llm_mode_with_a_fake_claude():
+    from fakes import FakeClient, json_reply
+
+    from agent.config import Settings
+    from evals.critic_eval import run_critic_llm
+
+    def critic(kind, quote):
+        return json_reply({"objections": [{"kind": kind, "severity": "high", "quote": quote, "problem": "p", "fix": "f"}],
+                           "letter_english": None, "letter_arabic": None, "changes_made": []})
+
+    clean = json_reply({"objections": [], "letter_english": None, "letter_arabic": None, "changes_made": []})
+    client = FakeClient([clean, critic("wrong_number", "AED 91,250"), critic("wrong_date", "1 October 2026"),
+                         critic("wrong_number", "10%"), critic("tone", "police"), clean])
+    out = run_critic_llm(client, Settings(api_key="t", model="claude-haiku-5-5", effort="medium", max_tool_rounds=3))
+    assert out["team"]["caught"] == 4 and out["team"]["false_alarms"] == 0     # k5 missed by both
+    assert out["claude_only"]["caught"] == 4 and out["meter"].requests == 6
 
 
 # ---- LLM mode with a fake Message Batches API ---------------------------------------
