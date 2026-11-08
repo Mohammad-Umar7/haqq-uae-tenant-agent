@@ -10,7 +10,10 @@
    last job). A citation from memory is exactly what RAG is meant to stop.
 
 Both are simple regex checks. They can't understand an argument, but they
-never get tired, never miss a digit, and cost nothing.
+never get tired, never miss a digit, and cost nothing. check_letter() reads
+Arabic letters too: Arabic-Indic digits are normalised first, and there are
+patterns for درهم amounts, Arabic month names, "المادة (14)" and
+"رقم (26) لسنة 2007".
 """
 
 from __future__ import annotations
@@ -21,6 +24,7 @@ from datetime import date
 from typing import Any
 
 from agent.dates import parse_date
+from agent.team.arabic import ARABIC_MONTHS, normalize
 
 # The only laws in the corpus. A letter citing any other law number cites
 # something the Law Researcher could not have found.
@@ -55,8 +59,11 @@ _MONTH = (r"(?:January|February|March|April|May|June|July|August|September|Octob
 _AMOUNTS = [
     re.compile(rf"(?:AED|Dhs?\.?|dirhams?)\s*({_NUM})", re.IGNORECASE),
     re.compile(rf"({_NUM})\s*(?:AED|dirhams?)\b", re.IGNORECASE),
+    re.compile(rf"(?:درهم|دراهم|د\.إ\.?)\s*({_NUM})"),
+    re.compile(rf"({_NUM})\s*(?:درهماً|درهما|درهم|دراهم|د\.إ)"),
 ]
-_PERCENT = re.compile(rf"({_NUM})\s*(?:%|per\s?cent\b)", re.IGNORECASE)
+_PERCENT = re.compile(rf"({_NUM})\s*(?:%|per\s?cent\b|بالمئة|بالمائة|في المئة|في المائة)", re.IGNORECASE)
+_ARABIC_DATE = re.compile(rf"(\d{{1,2}})\s+({'|'.join(ARABIC_MONTHS)})\s+(\d{{4}})")
 _DATES = [
     re.compile(rf"\b\d{{1,2}}(?:st|nd|rd|th)?\s+{_MONTH}\.?,?\s+\d{{4}}\b", re.IGNORECASE),
     re.compile(rf"\b{_MONTH}\.?\s+\d{{1,2}}(?:st|nd|rd|th)?,?\s+\d{{4}}\b", re.IGNORECASE),
@@ -65,6 +72,8 @@ _DATES = [
 ]
 _LAW_REF = re.compile(r"\b(?:Law|Decree)\s+No\.?\s*\(?(\d+)\)?\s+of\s+(\d{4})", re.IGNORECASE)
 _ARTICLE = re.compile(r"\bArt(?:icle)?s?\.?\s*\(?(\d+)\)?", re.IGNORECASE)
+_LAW_REF_AR = re.compile(r"رقم\s*\(?\s*(\d+)\s*\)?\s*لسنة\s*(\d{4})")
+_ARTICLE_AR = re.compile(r"المادة\s*\(?\s*(\d+)")
 
 
 def _to_float(text: str) -> float:
@@ -86,6 +95,11 @@ def _dates(text: str) -> list[tuple[str, date]]:
             day = parse_date(m.group(0).replace(",", ", ").replace("  ", " "))
             if day is not None:
                 found.setdefault(m.start(), (m.group(0), day))
+    for m in _ARABIC_DATE.finditer(text):
+        try:
+            found.setdefault(m.start(), (m.group(0), date(int(m.group(3)), ARABIC_MONTHS[m.group(2)], int(m.group(1)))))
+        except ValueError:
+            continue
     return [found[k] for k in sorted(found)]
 
 
@@ -105,6 +119,7 @@ class KnownFacts:
 def known_facts(case_text: str, allowed_citations: list[str]) -> KnownFacts:
     """Everything a letter may state: the numbers and dates in the case file,
     and the article numbers of the citations the team may use."""
+    case_text = normalize(case_text)
     numbers = {_to_float(m.group(0)) for m in re.finditer(_NUM, case_text)}
     dates = {d for _, d in _dates(case_text)}
     articles = {m.group(1) for c in allowed_citations for m in _ARTICLE.finditer(c)}
@@ -115,7 +130,8 @@ def known_facts(case_text: str, allowed_citations: list[str]) -> KnownFacts:
 
 def check_letter(letter: str, facts: KnownFacts) -> list[Objection]:
     """Objections for every amount, percentage, date, law or article in the
-    letter that the case file doesn't contain."""
+    letter that the case file doesn't contain. Works for English and Arabic letters."""
+    letter = normalize(letter)
     problems: list[Objection] = []
     for quote, value in _amounts(letter):
         if not facts.has_number(value):
@@ -135,13 +151,14 @@ def check_letter(letter: str, facts: KnownFacts) -> list[Objection]:
                 "wrong_date", "high", quote,
                 f"{quote} is not a date in the case file (contract dates, notice date, deadlines, today).",
                 "Use the date from the contract or the notice check.", "automatic check"))
-    for m in _LAW_REF.finditer(letter):
+    for m in [*_LAW_REF.finditer(letter), *_LAW_REF_AR.finditer(letter)]:
         if (m.group(1), m.group(2)) not in KNOWN_LAWS:
             problems.append(Objection(
                 "weak_citation", "high", m.group(0),
                 f"{m.group(0)} is not one of the laws in Haqq's corpus, so nobody on the team found it.",
                 "Cite only the laws in the allowed citations.", "automatic check"))
-    for article in dict.fromkeys(m.group(1) for m in _ARTICLE.finditer(letter)):
+    articles = [m.group(1) for pattern in (_ARTICLE, _ARTICLE_AR) for m in pattern.finditer(letter)]
+    for article in dict.fromkeys(articles):
         if article not in facts.articles:
             problems.append(Objection(
                 "weak_citation", "high", f"Art. {article}",

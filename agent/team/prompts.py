@@ -81,21 +81,47 @@ def _objection_lines(objections: list[Objection]) -> str:
     )
 
 
-def drafter_task(objections: list[Objection], allowed_citations: list[str] = ()) -> str:
-    """The Drafter's task: revise the draft once, answering the objections."""
-    allowed = "\n".join(f"- {c}" for c in allowed_citations) or "- (see allowed_citations in the case file)"
+def _arabic_rules(pairs: list[tuple[str, str]]) -> str:
+    forms = "\n".join(f"- {en} => {ar}" for en, ar in pairs) or "- (none: cite no law in the Arabic letter)"
     return (
-        "Your role: the Drafter. Revise the draft letter above once, answering these objections from the "
-        "Critic and from the automatic check of numbers, dates and citations:\n"
-        f"{_objection_lines(objections)}\n\n"
-        f"{_DRAFTER_RULES}\n\n"
-        "The only citations you may use (an automatic check rejects the revision if it cites anything else, "
+        "Also write the same letter in Arabic in letter_arabic: formal Modern Standard Arabic as used in official "
+        "correspondence in the UAE, with the same content and layout as letter_english (a faithful translation, "
+        "not a new letter).\n"
+        "- Citations: use these Arabic forms, copied exactly (English => Arabic), and nothing else:\n"
+        f"{forms}\n"
+        "- The official text of the law is Arabic, but the case file quotes the official English translation. "
+        "Don't put translated law text in quotation marks as if it were the Arabic original: paraphrase it and "
+        "cite the article.\n"
+        "- Write every number with Western digits (85,000), amounts as \"85,000 درهم\", and Gregorian dates as "
+        "\"14 يناير 2027\".\n"
+        "- Keep placeholders in square brackets, translated: [Your name] becomes [اسمك]."
+    )
+
+
+def drafter_task(objections: list[Objection], allowed_citations: list[str] = (),
+                 arabic_pairs: list[tuple[str, str]] | None = None) -> str:
+    """The Drafter's task: revise the draft once, answering the objections,
+    and/or write the Arabic version (when `arabic_pairs` is not None)."""
+    allowed = "\n".join(f"- {c}" for c in allowed_citations) or "- (see allowed_citations in the case file)"
+    if objections:
+        opening = ("Your role: the Drafter. Revise the draft letter above once, answering these objections from "
+                   "the Critic and from the automatic check of numbers, dates and citations:\n"
+                   f"{_objection_lines(objections)}\n\n{_DRAFTER_RULES}\n\n")
+        english = "Put the revised letter in letter_english. List each change in changes_made (one short line each)."
+    else:
+        opening = ("Your role: the Drafter. Nobody objected to the draft letter above, so don't change it: copy it "
+                   "unchanged into letter_english.\n\n")
+        english = "changes_made lists only what you did (for example: Arabic version written)."
+    task = (
+        f"{opening}"
+        "The only citations you may use (an automatic check rejects the letter if it cites anything else, "
         "or adds an amount or date that isn't in the case file):\n"
         f"{allowed}\n"
         "If an objection needs a citation or a fact the case file doesn't have, don't add it: say so in changes_made.\n\n"
-        "Put the revised letter in letter_english; letter_arabic is null. List each change in changes_made "
-        "(one short line each). objections is an empty list."
     )
+    if arabic_pairs is None:
+        return task + f"{english} letter_arabic is null. objections is an empty list."
+    return task + f"{_arabic_rules(arabic_pairs)}\n\n{english} objections is an empty list."
 
 
 def case_block(case_text: str, letter: str) -> str:

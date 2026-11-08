@@ -65,7 +65,7 @@ PROMPT_FINGERPRINT = make_key(
     EXTRACTION_FINGERPRINT,
     LAW_PATH.read_bytes(),
     KB_PATH.read_bytes(),
-    TEAM_SYSTEM, CRITIC_TASK, drafter_task([], []), json.dumps(TEAM_REPLY_SCHEMA, sort_keys=True),
+    TEAM_SYSTEM, CRITIC_TASK, drafter_task([], [], []), json.dumps(TEAM_REPLY_SCHEMA, sort_keys=True),
 )
 
 

@@ -6,6 +6,9 @@ from dataclasses import dataclass
 
 from agent.dates import parse_date
 
+# Which language(s) the letter to the landlord is written in.
+LETTER_LANGUAGES = {"en": "English", "ar": "Arabic", "both": "Arabic and English"}
+
 
 @dataclass(frozen=True)
 class TenantInputs:
@@ -14,6 +17,7 @@ class TenantInputs:
     notice_date: str | None = None           # when the landlord's notice arrived (YYYY-MM-DD)
     notice_type: str | None = None           # rent_increase | change_terms | eviction | None
     delivery_method: str | None = None       # see agent.tools.notice.DELIVERY_METHODS
+    letter_language: str = "en"              # en | ar | both (see LETTER_LANGUAGES)
 
     @classmethod
     def from_form(
@@ -23,6 +27,7 @@ class TenantInputs:
         notice_date: str | None,
         notice_type: str | None,
         delivery_method: str | None,
+        letter_language: str | None = "en",
     ) -> "TenantInputs":
         """Clean raw form values: blank -> None, 0 -> None, dates -> ISO."""
 
@@ -36,6 +41,7 @@ class TenantInputs:
             notice_date=parsed.isoformat() if parsed else None,
             notice_type=notice_type if notice_type and notice_type != "none" else None,
             delivery_method=delivery_method if delivery_method and delivery_method != "unknown" else None,
+            letter_language=letter_language if letter_language in LETTER_LANGUAGES else "en",
         )
 
     def as_lines(self) -> list[str]:
@@ -51,4 +57,6 @@ class TenantInputs:
             lines.append(f"Date the tenant received the landlord's notice: {self.notice_date}")
         if self.delivery_method:
             lines.append(f"How the notice was delivered: {self.delivery_method}")
+        if self.letter_language != "en":
+            lines.append(f"Write any letter to the landlord in: {LETTER_LANGUAGES[self.letter_language]}")
         return lines

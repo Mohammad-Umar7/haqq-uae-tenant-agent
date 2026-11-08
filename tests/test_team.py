@@ -280,4 +280,4 @@ def test_case_file_is_compact_and_deterministic(ctx):
 def test_the_drafter_is_shown_the_allowed_citations(ctx):
     _, _, client, _ = run_team(ctx, [team_reply([objection()]), team_reply(letter=draft1_body(ctx))])
     task = client.calls[1]["messages"][0]["content"][1]["text"]
-    assert "- Dubai Decree No. 43 of 2013, Art. 1" in task and "rejects the revision" in task
+    assert "- Dubai Decree No. 43 of 2013, Art. 1" in task and "rejects the letter" in task
