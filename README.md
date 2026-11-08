@@ -150,6 +150,19 @@ uae-tenant-agent/
 - Each PDF's SHA-256 is recorded. To rebuild: `python scripts/build_law_corpus.py --download downloads/law_pdfs`.
 - `tenant_rules.json` keeps seven short plain-English notes (rule ids used by the calculators and letters), each linked to the official articles it explains.
 
+## Market rent data: investigated, not included
+
+We wanted a `market_rent_lookup(area, bedrooms)` tool built from real Ejari rent contracts (median annual rent by area and bedroom count, labelled as an estimate next to the official RERA calculator). We only wanted data anyone can download without an account, and we did not want to make numbers up. On 8 November 2026 we found:
+
+| Source | What happened |
+|---|---|
+| Dubai Pulse dataset `dld_rent_contracts-open` (`https://www.dubaipulse.gov.ae/data/dld-registration/dld_rent_contracts-open`) | Redirects to the Data Dubai home page (`https://data.dubai/en/`). The dataset page no longer exists there. The old `https://www.dubaipulse.gov.ae/dataset/...` download paths reset the connection. |
+| Data Dubai (`https://data.dubai/en/data-and-statistics`) | No rent-contract or Ejari dataset listed. Its "Request Data" route is a form, and the data exchange is "restricted to government entities and authorized users only". |
+| DLD open data, Rents tab (`https://dubailand.gov.ae/en/open-data/real-estate-data/`) | The data comes from `https://gateway.dubailand.gov.ae/open-data/...`, but the page has Google reCAPTCHA switched on (`captchaEnabled: true`) and sends each query through a CAPTCHA proxy. A person can search and export it in a browser; a script would have to get around the CAPTCHA, which we won't do. |
+| `https://data.dubailand.gov.ae/` (named by third-party sites) | Did not connect. |
+
+So Haqq has no market data, and the RERA average still comes from the tenant, who gets it from the official DLD/RERA Rental Index calculator (the source of truth). If DLD publishes a bulk download again, the plan above still stands: aggregate recent contracts into a small CSV with the source URL, download date and row counts, and label every figure "DLD Ejari median, an estimate; the official RERA calculator is the source of truth".
+
 ## Cost & efficiency
 
 Default model: **Claude Haiku 5.5** ($0.10 per million input tokens, $0.50 per million output tokens, for prompts up to 100K tokens). Estimated cost of one full "Analyze my contract" run on the sample, from `python scripts/estimate_cost.py`:
