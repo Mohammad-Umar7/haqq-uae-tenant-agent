@@ -1,0 +1,9 @@
+# Runtime dependencies (this is what Hugging Face Spaces installs).
+# Versions verified together on 2026-11-08 with Python 3.11.
+gradio>=6.31,<7
+anthropic>=2.6,<3
+pypdf>=7.0,<8
+python-dotenv>=1.2,<2
+pydantic>=2.10,<3
+# Local BM25 keyword search over the law text (no embeddings service).
+rank_bm25>=0.2.2,<0.3

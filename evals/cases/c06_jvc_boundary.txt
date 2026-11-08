@@ -1,0 +1,28 @@
+FICTIONAL EVAL CONTRACT - ALL NAMES AND NUMBERS ARE INVENTED
+
+RESIDENTIAL TENANCY CONTRACT
+Emirate of Dubai
+
+Landlord: Bluepeak Holdings LLC
+Tenant: Mr. Tomasz Nowak
+Property: Apartment 1610, Circle Heights, Jumeirah Village Circle, Dubai
+Property Type: Residential apartment, 1 Bedroom
+
+Contract Period: From 01 February 2026 To 31 January 2027
+Annual Rent: AED 72,000
+Mode of Payment: 4 cheques
+Security Deposit: AED 3,600
+
+TERMS AND CONDITIONS
+
+1. The Tenant shall pay the rent on time.
+
+2. The Landlord is responsible for major maintenance.
+
+3. This contract shall be registered with Ejari.
+
+4. The security deposit shall be refunded at the end of the tenancy.
+
+ADDITIONAL TERMS
+
+5. The Tenant waives the right to bring any claim or complaint before the Rental Disputes Settlement Centre in connection with this contract.

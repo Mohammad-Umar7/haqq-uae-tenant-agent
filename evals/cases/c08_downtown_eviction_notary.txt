@@ -1,0 +1,26 @@
+FICTIONAL EVAL CONTRACT - ALL NAMES AND NUMBERS ARE INVENTED
+
+RESIDENTIAL TENANCY CONTRACT
+Emirate of Dubai
+
+Landlord: Mrs. Mariam Yousef Al Hashimi
+Tenant: Mr. Arjun Kapoor
+Property: Apartment 2805, Boulevard Point, Downtown Dubai, Dubai
+Property Type: Residential apartment, 2 Bedrooms
+
+Contract Period: From 01 March 2025 To 28 February 2027
+Annual Rent: AED 120,000
+Mode of Payment: 4 cheques
+Security Deposit: AED 6,000
+
+TERMS AND CONDITIONS
+
+1. This contract shall be registered with Ejari.
+
+2. The Landlord is responsible for structural and major maintenance.
+
+3. The security deposit shall be refunded at the end of the tenancy.
+
+ADDITIONAL TERMS
+
+4. This contract shall automatically renew for a further year with the rent increased by 7% unless either party objects in writing.

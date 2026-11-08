@@ -1,0 +1,26 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Tools
+.pytest_cache/
+.gradio/
+flagged/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/
+
+# Haqq local result cache (free repeats); see HAQQ_CACHE_DIR
+.haqq_cache/
+# Law PDFs downloaded by scripts/build_law_corpus.py (the JSON is committed)
+downloads/

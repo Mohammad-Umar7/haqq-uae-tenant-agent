@@ -1,0 +1,83 @@
+{
+  "_about": "Synthetic Dubai tenancy cases for the eval. All names, addresses and numbers are invented. 'expected' values were worked out by hand from the contract and the law (Decree No. 43 of 2013 bands; Law No. 26 of 2007 as amended, Art. 14 = 90 days, Art. 25(2) = 12 months via notary public or registered mail), not by running the tools. null means 'not applicable' (e.g. no proposed rent, or no notice yet).",
+  "today": "2026-11-08",
+  "cases": [
+    {
+      "id": "c01_marina_band0",
+      "description": "Rent 5% below average (0% band); proposed +5% exceeds the cap; notice on time; fair contract.",
+      "contract": "cases/c01_marina_band0.txt",
+      "inputs": {"rera_average_rent": 100000, "proposed_new_rent": 99750, "notice_type": "rent_increase", "notice_date": "2026-09-15", "delivery_method": "email"},
+      "expected": {"annual_rent_aed": 95000, "end_date": "2027-01-31", "max_increase_percent": 0, "within_cap": false, "notice_on_time": true, "delivery_ok": null, "red_flags": []}
+    },
+    {
+      "id": "c02_jlt_band5",
+      "description": "15% below average (5% band); proposed +4.7% is within the cap; notice on time; non-refundable deposit.",
+      "contract": "cases/c02_jlt_band5.txt",
+      "inputs": {"rera_average_rent": 100000, "proposed_new_rent": 89000, "notice_type": "rent_increase", "notice_date": "2026-11-20", "delivery_method": "hand_delivered"},
+      "expected": {"annual_rent_aed": 85000, "end_date": "2027-03-14", "max_increase_percent": 5, "within_cap": true, "notice_on_time": true, "delivery_ok": null, "red_flags": ["non_refundable_deposit"]}
+    },
+    {
+      "id": "c03_deira_band10",
+      "description": "25% below average (10% band); proposed +10% is exactly at the cap; notice 60 days before expiry is late; rent increase at any time.",
+      "contract": "cases/c03_deira_band10.txt",
+      "inputs": {"rera_average_rent": 80000, "proposed_new_rent": 66000, "notice_type": "rent_increase", "notice_date": "2026-11-01", "delivery_method": "email"},
+      "expected": {"annual_rent_aed": 60000, "end_date": "2026-12-31", "max_increase_percent": 10, "within_cap": true, "notice_on_time": false, "delivery_ok": null, "red_flags": ["rent_increase_any_time"]}
+    },
+    {
+      "id": "c04_silicon_band15",
+      "description": "35.4% below average (15% band); proposed +20% exceeds the cap; late notice; 3-month termination penalty; no Ejari.",
+      "contract": "cases/c04_silicon_band15.txt",
+      "inputs": {"rera_average_rent": 65000, "proposed_new_rent": 50400, "notice_type": "rent_increase", "notice_date": "2026-11-20", "delivery_method": "whatsapp_or_sms"},
+      "expected": {"annual_rent_aed": 42000, "end_date": "2027-02-09", "max_increase_percent": 15, "within_cap": false, "notice_on_time": false, "delivery_ok": null, "red_flags": ["early_termination_penalty_high", "ejari_not_mentioned"]}
+    },
+    {
+      "id": "c05_ranches_band20",
+      "description": "42.3% below average (20% band); proposed +20% is within the cap; notice on time; tenant bears all maintenance including structural.",
+      "contract": "cases/c05_ranches_band20.txt",
+      "inputs": {"rera_average_rent": 260000, "proposed_new_rent": 180000, "notice_type": "rent_increase", "notice_date": "2026-11-05", "delivery_method": "registered_mail"},
+      "expected": {"annual_rent_aed": 150000, "end_date": "2027-05-31", "max_increase_percent": 20, "within_cap": true, "notice_on_time": true, "delivery_ok": null, "red_flags": ["tenant_bears_all_maintenance"]}
+    },
+    {
+      "id": "c06_jvc_boundary",
+      "description": "Exactly 10% below average (still the 0% band); notice exactly 90 days before expiry (on time); waiver of the RDSC.",
+      "contract": "cases/c06_jvc_boundary.txt",
+      "inputs": {"rera_average_rent": 80000, "proposed_new_rent": 75600, "notice_type": "rent_increase", "notice_date": "2026-11-02", "delivery_method": "email"},
+      "expected": {"annual_rent_aed": 72000, "end_date": "2027-01-31", "max_increase_percent": 0, "within_cap": false, "notice_on_time": true, "delivery_ok": null, "red_flags": ["waiver_of_rdsc"]}
+    },
+    {
+      "id": "c07_bizbay_eviction_email",
+      "description": "Eviction to sell, notified by email about 6 months before expiry: late and the wrong delivery method; landlord can terminate on 60 days.",
+      "contract": "cases/c07_bizbay_eviction_email.txt",
+      "inputs": {"rera_average_rent": null, "proposed_new_rent": null, "notice_type": "eviction", "notice_date": "2026-07-01", "delivery_method": "email"},
+      "expected": {"annual_rent_aed": 130000, "end_date": "2027-01-14", "max_increase_percent": null, "within_cap": null, "notice_on_time": false, "delivery_ok": false, "red_flags": ["short_landlord_termination"]}
+    },
+    {
+      "id": "c08_downtown_eviction_notary",
+      "description": "Two-year contract; eviction for own use notified through a notary public more than 12 months ahead (valid); automatic renewal at +7%.",
+      "contract": "cases/c08_downtown_eviction_notary.txt",
+      "inputs": {"rera_average_rent": 130000, "proposed_new_rent": null, "notice_type": "eviction", "notice_date": "2026-02-10", "delivery_method": "notary_public"},
+      "expected": {"annual_rent_aed": 120000, "end_date": "2027-02-28", "max_increase_percent": 0, "within_cap": null, "notice_on_time": true, "delivery_ok": true, "red_flags": ["auto_renewal_fixed_increase"]}
+    },
+    {
+      "id": "c09_alnahda_above_average",
+      "description": "Rent above the average (no increase allowed); no notice yet; three red flags and no Ejari.",
+      "contract": "cases/c09_alnahda_above_average.txt",
+      "inputs": {"rera_average_rent": 50000, "proposed_new_rent": 57750, "notice_type": "rent_increase", "notice_date": null, "delivery_method": null},
+      "expected": {"annual_rent_aed": 55000, "end_date": "2027-03-31", "max_increase_percent": 0, "within_cap": false, "notice_on_time": null, "delivery_ok": null, "red_flags": ["non_refundable_deposit", "rent_increase_any_time", "waiver_of_rdsc", "ejari_not_mentioned"]}
+    },
+    {
+      "id": "c10_sportscity_fair_alt_layout",
+      "description": "Different layout (Lessor/Lessee, DD/MM/YYYY, '48,000 AED'); 11.1% below average (5% band); fair clauses written to look risky (minor maintenance, 12 months' notice).",
+      "contract": "cases/c10_sportscity_fair_alt_layout.txt",
+      "inputs": {"rera_average_rent": 54000, "proposed_new_rent": 50400, "notice_type": "rent_increase", "notice_date": "2026-10-15", "delivery_method": "email"},
+      "expected": {"annual_rent_aed": 48000, "end_date": "2027-04-30", "max_increase_percent": 5, "within_cap": true, "notice_on_time": true, "delivery_ok": null, "red_flags": []}
+    },
+    {
+      "id": "c11_hard_wording",
+      "description": "22.2% below average (10% band); proposed +20% exceeds the cap; red flags in unusual wording that keyword rules miss.",
+      "contract": "cases/c11_hard_wording.txt",
+      "inputs": {"rera_average_rent": 90000, "proposed_new_rent": 84000, "notice_type": "rent_increase", "notice_date": "2026-10-01", "delivery_method": "email"},
+      "expected": {"annual_rent_aed": 70000, "end_date": "2027-02-28", "max_increase_percent": 10, "within_cap": false, "notice_on_time": true, "delivery_ok": null, "red_flags": ["non_refundable_deposit", "rent_increase_any_time", "early_termination_penalty_high"]}
+    }
+  ]
+}

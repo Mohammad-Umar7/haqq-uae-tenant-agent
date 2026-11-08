@@ -1,0 +1,26 @@
+FICTIONAL EVAL CONTRACT - ALL NAMES AND NUMBERS ARE INVENTED
+
+RESIDENTIAL TENANCY CONTRACT
+Emirate of Dubai
+
+Landlord: Mr. Hamdan Ali Al Mazrouei
+Tenant: Ms. Grace Lim
+Property: Apartment 4102, Canal Vista Tower, Business Bay, Dubai
+Property Type: Residential apartment, 2 Bedrooms
+
+Contract Period: From 15 January 2026 To 14 January 2027
+Annual Rent: AED 130,000
+Mode of Payment: 4 cheques
+Security Deposit: AED 6,500
+
+TERMS AND CONDITIONS
+
+1. This contract shall be registered with Ejari.
+
+2. The security deposit shall be refunded at the end of the tenancy.
+
+3. The Landlord is responsible for structural repairs.
+
+ADDITIONAL TERMS
+
+4. The Landlord may terminate this contract at any time by giving the Tenant sixty (60) days' notice.

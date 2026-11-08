@@ -1,0 +1,98 @@
+{
+  "_about": "Curated plain-English notes on Dubai tenancy rules. The official law text lives in law_articles.json; each rule links to the articles it explains (law_article_ids). Keep this list small and only add rules you have checked against the official text. 'article' is null when the rule does not rest on one article of Law No. 26 of 2007.",
+  "jurisdiction": "Emirate of Dubai (not Abu Dhabi, Sharjah or other emirates)",
+  "last_reviewed": "2026-11-08",
+  "rules": [
+    {
+      "id": "rent_increase_caps",
+      "title": "Maximum rent increase at renewal",
+      "source": "Dubai Decree No. 43 of 2013",
+      "article": null,
+      "citation": "Dubai Decree No. 43 of 2013 (rent increase caps)",
+      "law_article_ids": ["decree43_art1"],
+      "summary": "The maximum rent increase depends on how far the current rent is below the RERA Rental Index average for similar units: up to 10% below = no increase; 11-20% below = max 5%; 21-30% below = max 10%; 31-40% below = max 15%; more than 40% below = max 20%.",
+      "plain_english": "If you already pay close to the market average, the landlord cannot raise your rent at all. The further below average you are, the bigger the increase the landlord may ask for, up to 20%.",
+      "tenant_tip": "Get the average rent for your unit type and area from the official DLD/RERA Rental Index calculator and keep a screenshot of the result.",
+      "keywords": ["rent increase", "increase", "raise", "rental index", "rera", "cap", "percentage", "renewal", "decree 43"],
+      "verify_with": "Official DLD/RERA Rental Index calculator"
+    },
+    {
+      "id": "rental_index_source",
+      "title": "The RERA Rental Index is the reference for 'average rent'",
+      "source": "Dubai Decree No. 43 of 2013; RERA Rental Index",
+      "article": null,
+      "citation": "Dubai Decree No. 43 of 2013 (measured against the RERA Rental Index)",
+      "law_article_ids": ["decree43_art3"],
+      "summary": "The 'average rental value of similar units' used for the increase caps is determined by the Rent Index of the Emirate of Dubai approved by RERA. Dubai updated its rental index in 2025, so older figures may be out of date.",
+      "plain_english": "Use the official calculator, not property-portal listings, to find the average rent. The official calculator is the source of truth.",
+      "tenant_tip": "Run the calculator close to your renewal date, because the index is updated.",
+      "keywords": ["rental index", "average rent", "calculator", "dld", "rera", "market rent", "2025"],
+      "verify_with": "Official DLD/RERA Rental Index calculator"
+    },
+    {
+      "id": "notice_change_terms_90_days",
+      "title": "90 days' notice to change contract terms (including rent)",
+      "source": "Dubai Law No. 26 of 2007, as amended by Law No. 33 of 2008",
+      "article": "14",
+      "citation": "Dubai Law No. 26 of 2007 (as amended by Law No. 33 of 2008), Art. 14",
+      "law_article_ids": ["law26_art14", "law26_art13"],
+      "summary": "Unless the parties agreed otherwise, a party who wants to change any term of the tenancy contract at renewal, including the rent, must notify the other party at least 90 days before the contract expires.",
+      "plain_english": "If your landlord wants to raise the rent or change other terms when you renew, they have to tell you in writing at least 90 days before your contract ends, unless your contract sets a different notice period.",
+      "tenant_tip": "Keep the date you received the notice and a copy of it. Check whether your contract changes the 90-day period. A late notice is a strong point in any dispute.",
+      "keywords": ["notice", "90 days", "ninety", "change terms", "amend", "rent increase", "renewal", "article 14"],
+      "verify_with": "RERA / Rental Disputes Settlement Centre"
+    },
+    {
+      "id": "eviction_12_months_notice",
+      "title": "12 months' notice for eviction at expiry (own use, sale, demolition, major renovation)",
+      "source": "Dubai Law No. 26 of 2007, as amended by Law No. 33 of 2008",
+      "article": "25(2)",
+      "citation": "Dubai Law No. 26 of 2007 (as amended by Law No. 33 of 2008), Art. 25(2)",
+      "law_article_ids": ["law26_art25", "law26_art26"],
+      "summary": "At the end of the contract, a landlord may seek eviction only if the owner wants to demolish and rebuild, the property needs restoration that can't be done with the tenant inside (verified by Dubai Municipality), the owner wants it for their own use or a first-degree relative's (and owns no suitable alternative), or the owner wants to sell it. The landlord must notify the tenant at least 12 months before the eviction date, through a notary public or by registered mail.",
+      "plain_english": "Your landlord can't simply tell you to leave at the end of your contract because they want to move in, sell, demolish or renovate. They must give you 12 months' notice, sent through a notary public or registered mail. A WhatsApp message or a normal email does not meet this requirement.",
+      "tenant_tip": "Check how the notice was delivered and when. Note the date on the notarised notice or the registered-mail receipt.",
+      "keywords": ["eviction", "evict", "vacate", "leave", "move out", "kick out", "notice", "own use", "sell", "sale", "demolition", "renovation", "12 months", "notary", "registered mail", "article 25"],
+      "verify_with": "RERA / Rental Disputes Settlement Centre"
+    },
+    {
+      "id": "security_deposit_return",
+      "title": "Return of the security deposit",
+      "source": "Dubai Law No. 26 of 2007, as amended by Law No. 33 of 2008",
+      "article": "20",
+      "citation": "Dubai Law No. 26 of 2007 (as amended by Law No. 33 of 2008), Art. 20",
+      "law_article_ids": ["law26_art20"],
+      "summary": "A security deposit guarantees the maintenance of the property, and the landlord undertakes to refund the deposit, or what remains of it, to the tenant at the end of the tenancy.",
+      "plain_english": "Your deposit is yours. The landlord should give it back when the tenancy ends. If the landlord wants to keep part of it for damage, ask for evidence and an itemised list. A clause calling the deposit 'non-refundable' is a red flag.",
+      "tenant_tip": "Take dated photos and video of the unit when you move in and when you move out.",
+      "keywords": ["deposit", "security deposit", "refund", "non-refundable", "return", "damage", "article 20"],
+      "verify_with": "RERA / Rental Disputes Settlement Centre"
+    },
+    {
+      "id": "rdsc_disputes",
+      "title": "Rental disputes go to the Rental Disputes Settlement Centre (RDSC)",
+      "source": "Rental Disputes Settlement Centre, Dubai Land Department",
+      "article": null,
+      "citation": "Dubai Rental Disputes Settlement Centre (RDSC)",
+      "law_article_ids": [],
+      "summary": "Disputes between landlords and tenants in Dubai are handled by the Rental Disputes Settlement Centre (RDSC). A tenant can file a case there.",
+      "plain_english": "If you and your landlord can't agree, you can take the dispute to the RDSC. A contract clause that says you 'waive' that right is a red flag; check with the RDSC whether it can be enforced against you.",
+      "tenant_tip": "Bring your registered (Ejari) contract, proof of payments and all written messages with your landlord.",
+      "keywords": ["dispute", "rdsc", "complaint", "case", "court", "settlement", "waive", "file"],
+      "verify_with": "Rental Disputes Settlement Centre (RDSC)"
+    },
+    {
+      "id": "ejari_registration",
+      "title": "Register the tenancy contract with Ejari",
+      "source": "Dubai Law No. 26 of 2007, as amended by Law No. 33 of 2008; Ejari (RERA / Dubai Land Department)",
+      "article": null,
+      "citation": "Ejari registration (RERA / Dubai Land Department)",
+      "law_article_ids": ["law26_art4"],
+      "summary": "All lease contracts governed by the tenancy law must be registered with RERA, which is done through Ejari, the official registration system. A registered contract is the basis for many services and for filing a case at the RDSC.",
+      "plain_english": "Make sure your contract is registered with Ejari. Ask the landlord or agent for the Ejari certificate.",
+      "tenant_tip": "Keep the Ejari certificate with your contract.",
+      "keywords": ["ejari", "register", "registration", "certificate"],
+      "verify_with": "Dubai Land Department / Ejari"
+    }
+  ]
+}
