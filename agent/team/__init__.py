@@ -5,4 +5,5 @@
     prompts.py     the team's frozen system prompt, role tasks and shared reply schema
     specialist.py  one focused Claude call for a specialist (spend guard, cost, validation)
     drafting.py    Drafter -> Critic -> Drafter, behind the draft_letter tool
+    notice_reader.py  the Notice Reader: Claude vision reads a screenshot of the landlord's notice
 """

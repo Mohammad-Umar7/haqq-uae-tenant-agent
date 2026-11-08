@@ -44,7 +44,14 @@ from agent.law_search import LAW_PATH
 from agent.prompts import SYSTEM_PROMPT, build_user_message
 from agent.registry import TOOL_SCHEMAS, ToolContext
 from agent.result_cache import ResultCache, event_from_dict, event_to_dict, make_key
-from agent.roster import CONTRACT_ANALYST
+from agent.roster import CONTRACT_ANALYST, NOTICE_READER
+from agent.team.notice_reader import (
+    NoticeImageError,
+    describe_reading,
+    load_notice_image,
+    run_notice_reader,
+    sample_reading,
+)
 from agent.team.prompts import CRITIC_TASK, TEAM_REPLY_SCHEMA, TEAM_SYSTEM, drafter_task
 from agent.trace import TraceEvent
 
@@ -149,6 +156,66 @@ def _replay(hit: dict[str, Any]) -> Iterator[TraceEvent]:
     was = f"; the first run cost about {format_usd(first_run)}" if first_run is not None else ""
     yield from _final(hit["text"], f"This analysis cost $0.00 (answered from the local cache{was}).",
                       usage={}, cached=True)
+
+
+def read_notice(
+    session: Session,
+    image_path: str,
+    *,
+    settings: Settings,
+    agent: Any = None,
+    cache: ResultCache | None = None,
+) -> Iterator[TraceEvent]:
+    """The Notice Reader on its own (before an analysis): screenshot -> form values.
+
+    The last event is kind="final" with detail={"reading": NoticeReading | None, "text": markdown}.
+    The tenant confirms the values in the form; nothing is analysed yet.
+    """
+    try:
+        image = load_notice_image(image_path, max_bytes=int(settings.max_upload_mb * 1_048_576))
+    except (NoticeImageError, OSError) as exc:
+        yield TraceEvent("error", "Couldn't use that image", detail=str(exc), is_error=True, agent=NOTICE_READER)
+        yield TraceEvent("final", "notice", detail={"reading": None, "text": f"**Couldn't use that image:** {exc}"})
+        return
+
+    if agent is None:   # demo mode: no vision without a key, except the bundled sample
+        reading = sample_reading(image)
+        if reading is None:
+            text = ("**Reading a screenshot needs Claude vision**, so it only works with an ANTHROPIC_API_KEY. "
+                    "Type the details into the form instead, or click **Load sample notice** to see how it works.")
+            yield TraceEvent("final", "notice", detail={"reading": None, "text": text})
+            return
+        yield TraceEvent("info", "Demo mode: showing the stored reading of the sample notice", agent=NOTICE_READER,
+                         detail="No API key, so Claude vision is off. samples/sample_notice.json holds the correct reading.")
+        yield TraceEvent("tool_result", "read_notice_image", detail=reading.model_dump(mode="json"), agent=NOTICE_READER)
+        text = describe_reading(reading, "Demo mode: $0.00 (no API calls).")
+        yield TraceEvent("final", "notice", detail={"reading": reading, "text": text})
+        return
+
+    if session.llm_requests >= settings.max_requests_per_session:
+        text = (f"This session has used its {settings.max_requests_per_session} questions "
+                "(HAQQ_MAX_REQUESTS_PER_SESSION). Reload the page to start a new session.")
+        yield TraceEvent("error", "Session request limit reached", is_error=True, agent=NOTICE_READER)
+        yield TraceEvent("final", "notice", detail={"reading": None, "text": text})
+        return
+    session.llm_requests += 1
+
+    reader = run_notice_reader(image, agent.client, settings, cache)
+    events: list[TraceEvent] = []
+    while True:
+        try:
+            event = next(reader)
+        except StopIteration as stop:
+            reading = stop.value
+            break
+        events.append(event)
+        yield event
+    if reading is None:
+        text = "**I couldn't read that screenshot.** Try a sharper image, or type the details into the form."
+    else:
+        cost = next((e.detail for e in reversed(events) if e.title == "Cost"), "")
+        text = describe_reading(reading, cost)
+    yield TraceEvent("final", "notice", detail={"reading": reading, "text": text})
 
 
 def run_turn(

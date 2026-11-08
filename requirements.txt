@@ -7,3 +7,5 @@ python-dotenv>=1.2,<2
 pydantic>=2.10,<3
 # Local BM25 keyword search over the law text (no embeddings service).
 rank_bm25>=0.2.2,<0.3
+# Images: the Notice Reader checks and shrinks screenshots; scripts/make_sample_notice.py draws the sample.
+pillow>=12,<13

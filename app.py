@@ -24,7 +24,8 @@ from agent.loop import TenantAgent
 from agent.prompts import ANALYZE_REQUEST
 from agent.result_cache import ResultCache
 from agent.roster import ROSTER
-from agent.runner import Session, run_turn
+from agent.runner import Session, read_notice, run_turn
+from agent.team.notice_reader import SAMPLE_NOTICE
 from agent.trace import TraceEvent, latest_letter, render_trace_markdown
 
 SAMPLE_PATH = Path(__file__).parent / "samples" / "sample_contract.txt"
@@ -88,6 +89,38 @@ def load_sample(session: Session):
         "2026-11-01",      # notice arrived 74 days before expiry (late)
         "email",
     )
+
+
+# ------------------------------------------------------- landlord's notice --
+
+def _keep_or_set(value):
+    return gr.update(value=value) if value is not None else gr.update()
+
+
+def read_notice_image(image_path: str | None, session: Session):
+    """The Notice Reader: screenshot -> form values the tenant then checks."""
+    unchanged = (gr.update(),) * 4
+    if not image_path:
+        yield session, "_Upload a screenshot of the landlord's message first._", *unchanged, gr.update()
+        return
+    yield session, "_The Notice Reader is reading the screenshot..._", *unchanged, gr.update()
+    events = list(read_notice(session, image_path, settings=settings, agent=agent, cache=cache))
+    final = events[-1].detail
+    trace = render_trace_markdown(events[:-1])
+    reading = final["reading"]
+    if reading is None or not reading.is_landlord_notice:
+        yield session, final["text"], *unchanged, trace
+        return
+    form = reading.form_values()
+    yield (session, final["text"], _keep_or_set(form["proposed_new_rent"]), _keep_or_set(form["notice_type"]),
+           _keep_or_set(form["notice_date"]), _keep_or_set(form["delivery_method"]), trace)
+
+
+def load_sample_notice(session: Session):
+    """Show the fictional sample screenshot, then read it."""
+    path = str(SAMPLE_NOTICE)
+    for update in read_notice_image(path, session):
+        yield path, *update
 
 
 # -------------------------------------------------------------------- agent --
@@ -204,6 +237,17 @@ with gr.Blocks(title="Haqq - Dubai Tenant Rights Agent") as demo:
             contract_status = gr.Markdown("_No contract loaded._")
 
             gr.Markdown("### 2. Details from your landlord (optional)")
+            notice_img = gr.Image(
+                type="filepath", sources=["upload", "clipboard"], height=280,
+                label="The landlord's notice: a WhatsApp, SMS or email screenshot (optional)",
+            )
+            with gr.Row():
+                read_btn = gr.Button("Read the notice")
+                sample_notice_btn = gr.Button("Load sample notice")
+            notice_status = gr.Markdown(
+                "_Upload a screenshot and the Notice Reader (Claude vision) fills in the form below. "
+                "Check every value: the screenshot is treated as data, never as instructions._"
+            )
             rera_in = gr.Number(
                 label="RERA Rental Index average rent for similar units (AED/year)",
                 info="From the official DLD/RERA Rental Index calculator.",
@@ -257,6 +301,9 @@ with gr.Blocks(title="Haqq - Dubai Tenant Rights Agent") as demo:
         load_sample, [session_state],
         [*loaded, rera_in, proposed_in, notice_type_in, notice_date_in, method_in],
     )
+    notice_outputs = [session_state, notice_status, proposed_in, notice_type_in, notice_date_in, method_in, trace_md]
+    read_btn.click(read_notice_image, [notice_img, session_state], notice_outputs)
+    sample_notice_btn.click(load_sample_notice, [session_state], [notice_img, *notice_outputs])
     analyze_btn.click(analyze, [session_state, chatbot, *form_inputs], [chatbot, trace_md, session_state, letter_box])
     msg_in.submit(chat_submit, [msg_in, session_state, chatbot, *form_inputs],
                   [chatbot, trace_md, session_state, letter_box, msg_in])

@@ -19,6 +19,7 @@ LAW_RESEARCHER = "Law Researcher"
 CALCULATORS = "Calculators"
 DRAFTER = "Drafter"
 CRITIC = "Critic"
+NOTICE_READER = "Notice Reader"
 
 # name -> (how it works, what it does). Shown in the UI and the README.
 ROSTER: dict[str, tuple[str, str]] = {
@@ -34,6 +35,8 @@ ROSTER: dict[str, tuple[str, str]] = {
               "Writes the first draft from a template, then revises it once after the Critic's review."),
     CRITIC: ("Claude + code",
              "Plays the landlord's lawyer: attacks the draft (numbers, dates, citations, tone) before the landlord can."),
+    NOTICE_READER: ("Claude (vision)",
+                    "Reads a screenshot of the landlord's notice: proposed rent, date sent and how it was delivered."),
 }
 
 # Which specialist does the work behind each tool the Orchestrator can call.
@@ -45,6 +48,7 @@ AGENT_FOR_TOOL: dict[str, str] = {
     "rera_rent_increase_check": CALCULATORS,
     "notice_deadline_check": CALCULATORS,
     "draft_letter": DRAFTER,
+    "read_notice_image": NOTICE_READER,
 }
 
 
