@@ -305,6 +305,44 @@ def test_helpers():
     assert digest["letter"] is None and digest["answer_html"] == "<p>Hello</p>\n"
 
 
+def test_a_letter_without_line_breaks_gets_its_layout_back(client):
+    from webapi import reflow_letter
+
+    h = start(client)
+    client.post("/api/contract/sample", headers=h)
+    body = events_of(client.post("/api/analyze", headers=h, json=DEMO_FORM))[-1][1]["letter"]["body"]
+    assert reflow_letter(body) == body                        # a letter with line breaks is left alone
+    flat = " ".join(body.split())
+    out = reflow_letter(flat)
+    assert " ".join(out.split()) == flat                      # only whitespace changed
+    lines = out.splitlines()
+    assert lines[:4] == body.splitlines()[:4]                 # Date / To / From / Property
+    assert "\nSubject:" in out and "\n\nDear Mr. Hamad Saif Al Marri,\n\n" in out
+    assert "\n\nThe facts as I understand them:\n- Our tenancy" in out and out.endswith("Kind regards,\nMs. Priya Raman")
+    arabic = ("التاريخ: 12 نوفمبر 2026 "
+              "إلى: السيد حمد "
+              "من: السيدة بريا "
+              "السيد حمد، شكرًا. - أولًا")
+    ar = reflow_letter(arabic)
+    assert ar.splitlines()[1].startswith("إلى: السيد")   # a name in a field stays on its line
+    assert "\n\nالسيد حمد،\n\n" in ar and ar.endswith("\n- أولًا")
+
+
+def test_clauses_claude_flagged_join_the_red_flags():
+    from webapi import merge_flags
+
+    scan = {"flags": [{"flag_id": "non_refundable_deposit", "clause_number": "7", "severity": "high", "title": "x"}]}
+    extraction = {"llm_flagged_clauses": [
+        {"flag_id": "non_refundable_deposit", "clause_number": "7", "quote": "same clause"},
+        {"flag_id": "waiver_of_rdsc", "clause_number": "12", "quote": "The Tenant waives ..."},
+        {"flag_id": "other", "clause_number": "3", "quote": "Something odd"},
+    ]}
+    flags = merge_flags(scan, extraction)
+    assert [(f["clause_number"], f["source"]) for f in flags] == [("7", "scan"), ("12", "claude"), ("3", "claude")]
+    assert flags[1]["severity"] == "high" and flags[1]["citations"] and flags[2]["severity"] == "medium"
+    assert merge_flags(None, None) == []
+
+
 def test_app_mounts_the_classic_gradio_ui(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-your-key-placeholder")   # demo mode: no real client
     import app as app_module

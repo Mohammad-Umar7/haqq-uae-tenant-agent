@@ -53,7 +53,7 @@ from agent.config import Settings
 from agent.contract import ContractLoadError, LoadedContract, load_contract_upload
 from agent.cost import UsageMeter, format_usd
 from agent.inputs import LETTER_LANGUAGES, TenantInputs
-from agent.knowledge import DISCLAIMER
+from agent.knowledge import DISCLAIMER, citation_for
 from agent.law_search import LAW_PATH
 from agent.prompts import ANALYZE_REQUEST
 from agent.result_cache import ResultCache
@@ -61,6 +61,7 @@ from agent.roster import CRITIC, ROSTER
 from agent.runner import Session, read_notice, run_turn
 from agent.team.arabic import ARABIC_SOURCES
 from agent.team.notice_reader import DELIVERY_LABELS, SAMPLE_NOTICE
+from agent.tools.clause_scan import RED_FLAGS
 from agent.trace import TraceEvent, latest_letter
 
 log = logging.getLogger("haqq.web")
@@ -203,7 +204,8 @@ def days_late(notice: dict[str, Any]) -> int | None:
 
 def _first_sentence(text: str, limit: int = 150) -> str:
     text = " ".join(str(text or "").split())
-    cut = re.split(r"(?<=[.!?])\s", text, maxsplit=1)[0]
+    # A sentence ends before a capital letter, so "Art. 14" and "No. 26" stay whole.
+    cut = re.split(r"(?<=[.!?])\s+(?=[A-Z\"“])", text, maxsplit=1)[0]
     return cut if len(cut) <= limit else cut[: limit - 1].rstrip() + "…"
 
 
@@ -327,6 +329,39 @@ def serialize(ev: TraceEvent, t: float | None = None, cost_usd: float | None = N
 
 # ------------------------------------------------------------------- digest --
 
+# Header fields (English and Arabic: to, from, property, reference) start a new line.
+_FIELDS = re.compile("\\s+(?=(?:To|From|Property|Ref|Re|\u0625\u0644\u0649|\u0645\u0646|\u0627\u0644\u0639\u0642\u0627\u0631|"
+                     "\u0627\u0644\u0645\u0631\u062c\u0639):\\s)")
+_SUBJECT = re.compile("\\s+(?=(?:Subject|\u0627\u0644\u0645\u0648\u0636\u0648\u0639):\\s)")
+# The salutation ("Dear ...," / "\u0627\u0644\u0633\u064a\u062f ...\u060c") once, not a name inside a header field.
+_SALUTATION = re.compile("(?<![:\\n])\\s+((?:Dear|\u0627\u0644\u0633\u064a\u062f|\u0627\u0644\u0633\u064a\u062f\u0629|\u0639\u0632\u064a\u0632\u064a)"
+                         "\\s[^\\n,\u060c:]{1,80}[,\u060c])\\s+")
+_CLOSING = re.compile("\\s+((?:Kind regards|Yours sincerely|Yours faithfully|Best regards|Sincerely|"
+                      "\u0648\u062a\u0641\u0636\u0644\u0648\u0627|\u0645\u0639 \u062e\u0627\u0644\u0635|\u0645\u0639 \u0627\u0644\u062a\u062d\u064a\u0629)"
+                      "[^\\n,\u060c]{0,60}[,\u060c])\\s+")
+_BULLET = re.compile(r"\s+-\s+(?=\S)")
+_LIST_INTRO = re.compile(r"(?<=[.!?\u061f])\s+([^.!?\n:]{3,90}:)(?=\n- )")
+
+
+def reflow_letter(text: str | None) -> str | None:
+    """Put the line breaks back into a letter that came back as one long line.
+
+    The Drafter's revision sometimes returns the letter with every newline dropped. Only
+    whitespace changes here: header fields and list items start new lines; the subject, the
+    salutation, a list's lead-in and the closing start new paragraphs. A letter that already
+    has line breaks is returned untouched.
+    """
+    if not text or "\n" in text:
+        return text
+    out = _FIELDS.sub("\n", text)
+    out = _SUBJECT.sub("\n\n", out)
+    out = _SALUTATION.sub(r"\n\n\1\n\n", out, count=1)
+    out = _CLOSING.sub(r"\n\n\1\n", out, count=1)
+    out = _BULLET.sub("\n- ", out)
+    out = _LIST_INTRO.sub(r"\n\n\1", out)
+    return out.strip()
+
+
 def _letter_payload(letter: dict[str, Any] | None, language: str, llm: bool) -> dict[str, Any] | None:
     if not letter:
         return None
@@ -343,8 +378,8 @@ def _letter_payload(letter: dict[str, Any] | None, language: str, llm: bool) -> 
     return {
         "subject": letter.get("subject"),
         "letter_type": letter.get("letter_type"),
-        "body": letter.get("body"),
-        "body_arabic": arabic,
+        "body": reflow_letter(letter.get("body")),
+        "body_arabic": reflow_letter(arabic),
         "arabic_unavailable": reason,
         "version": letter.get("version"),
         "objections": review.get("objections", []),
@@ -354,6 +389,34 @@ def _letter_payload(letter: dict[str, Any] | None, language: str, llm: bool) -> 
         "cited_rules": letter.get("cited_rules", []),
         "rule_ids": letter.get("rule_ids", []),
     }
+
+
+def merge_flags(scan: dict[str, Any] | None, extraction: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Red flags from the keyword scan, plus the clauses Claude flagged when it read the
+    contract (LLM mode), described with the same rule cards. Each flag says where it came from."""
+    flags = [{**f, "source": "scan"} for f in (scan or {}).get("flags", [])]
+    seen = {(f.get("flag_id"), str(f.get("clause_number"))) for f in flags}
+    rules = {r.id: r for r in RED_FLAGS}
+    for f in (extraction or {}).get("llm_flagged_clauses") or []:
+        key = (f.get("flag_id"), str(f.get("clause_number")))
+        if key in seen:
+            continue
+        seen.add(key)
+        rule = rules.get(f.get("flag_id"))
+        rule_ids = list(rule.rule_ids) if rule else []
+        flags.append({
+            "flag_id": f.get("flag_id"),
+            "title": rule.title if rule else "A clause worth a second look",
+            "severity": rule.severity if rule else "medium",
+            "clause_number": f.get("clause_number"),
+            "clause_excerpt": f.get("quote"),
+            "why_it_matters": rule.why if rule else "Claude flagged this clause while reading the contract. Check it with RERA or the RDSC.",
+            "rule_ids": rule_ids,
+            "citations": [c for c in (citation_for(r) for r in rule_ids) if c],
+            "source": "claude",
+        })
+    order = {"high": 0, "medium": 1, "low": 2}
+    return sorted(flags, key=lambda f: order.get(f.get("severity"), 3))
 
 
 def build_digest(events: list[TraceEvent], final: TraceEvent, *, language: str, llm: bool) -> dict[str, Any]:
@@ -406,7 +469,7 @@ def build_digest(events: list[TraceEvent], final: TraceEvent, *, language: str, 
         "derived": terms_out.get("derived"),
         "rent": results.get("rera_rent_increase_check"),
         "notice": {**notice, "days_late": days_late(notice)} if notice else None,
-        "flags": (results.get("clause_risk_scan") or {}).get("flags", []),
+        "flags": merge_flags(results.get("clause_risk_scan"), terms_out),
         "law": list(articles.values()),
         "rules": rules,
         "letter": _letter_payload(latest_letter(events), language, llm),
@@ -701,14 +764,14 @@ def create_web_app(
         yield _sse("start", {"mode": "llm" if llm else "demo", "analyze": analyze})
         stream = run_turn(entry.session, user_text, analyze=analyze, inputs=inputs, today=today(),
                           settings=settings, agent=agent, cache=cache, meter=meter)
-        for ev in stream:
+        for ev in stream:   # read to the end: run_turn caches the answer after its last event
             elapsed = time.perf_counter() - started
             if ev.kind == "final":
                 digest = build_digest(events, ev, language=inputs.letter_language, llm=llm)
                 digest["elapsed_s"] = round(elapsed, 1)
                 digest["requests_used"] = entry.session.llm_requests
                 yield _sse("final", digest)
-                return
+                continue
             events.append(ev)
             yield _sse("step", serialize(ev, elapsed, meter.cost_usd if meter else 0.0))
             if (letter := latest_letter([ev])) is not None:

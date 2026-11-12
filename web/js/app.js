@@ -563,7 +563,8 @@
     if (opts.stamp) v.appendChild(h("p", { class: "stamp stamp-red", "data-stamp": true, text: opts.stamp }));
     var fig = h("p", { class: "v-figure" });
     if (opts.figureSmall) fig.appendChild(h("small", { text: opts.figureSmall + " " }));
-    fig.appendChild(document.createTextNode(opts.figure));
+    var digits = /^[\d,]+$/.test(opts.figure) ? Number(opts.figure.replace(/,/g, "")) : null;
+    fig.appendChild(digits != null ? h("span", { class: "v-num", "data-to": String(digits), text: opts.figure }) : document.createTextNode(opts.figure));
     if (opts.figureUnit) fig.appendChild(h("small", { text: " " + opts.figureUnit }));
     v.appendChild(fig);
     var caption = h("p", { class: "v-caption", text: opts.caption });
@@ -656,12 +657,16 @@
     var wrap = $("[data-flags-wrap]"), list = $("[data-flags]");
     list.innerHTML = "";
     var flags = d.flags || [];
-    $("[data-flags-label]").textContent = flags.length ? "Red flags · " + flags.length + " found by the clause scan" : "Red flags";
+    var byClaude = flags.filter(function (f) { return f.source === "claude"; }).length;
+    var by = byClaude === flags.length ? "Claude's reading of the contract" : byClaude ? "the clause scan and Claude's reading" : "the clause scan";
+    $("[data-flags-label]").textContent = flags.length ? "Red flags · " + flags.length + " found by " + by : "Red flags";
     flags.forEach(function (f) {
-      var refs = fn.refs(f.rule_ids, f.citations);
+      var refs = fn.refs(f.rule_ids, f.citations) ||
+        (f.citations && f.citations.length ? h("span", { class: "cite-inline", text: f.citations.join("; ") }) : null);
+      var where = (f.clause_number ? "Clause " + f.clause_number : "The whole contract") + (f.source === "claude" ? " · flagged by Claude" : "");
       var content = h("div", { class: "flag-body" },
         h("h4", { text: f.title }),
-        h("p", { class: "flag-where", text: f.clause_number ? "Clause " + f.clause_number : "The whole contract" }),
+        h("p", { class: "flag-where", text: where }),
         f.clause_excerpt ? h("blockquote", { text: "“" + f.clause_excerpt + "”" }) : null,
         h("p", { class: "flag-why" }, f.why_it_matters, refs));
       list.appendChild(h("li", { class: "flag" }, h("p", { class: "sev sev-" + f.severity, text: SEVERITY[f.severity] || f.severity }), content));
@@ -819,6 +824,7 @@
     var answerWrap = $("[data-answer-wrap]"), reportWrap = $("[data-report-wrap]");
     if (state.mode === "llm") {
       $("[data-answer]").innerHTML = d.answer_html;
+      markCitations($("[data-answer]"));
       answerWrap.hidden = !d.answer_text;
       reportWrap.hidden = true;
     } else {
@@ -836,10 +842,39 @@
     if (motion().reveal) motion().reveal($$(".results > *:not([hidden])"), 0.07);
     watchStamps();
   }
+  /* "[Dubai Law No. 26 of 2007 ..., Art. 20]" in an answer becomes a small typeset citation. */
+  function markCitations(scope) {
+    var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+    var nodes = [], node;
+    while ((node = walker.nextNode())) if (/\[Dubai (Law|Decree)/.test(node.nodeValue)) nodes.push(node);
+    nodes.forEach(function (n) {
+      var frag = document.createDocumentFragment(), last = 0, text = n.nodeValue, m;
+      var re = /\[(Dubai (?:Law|Decree)[^\]]{4,160})\]/g;
+      while ((m = re.exec(text))) {
+        frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+        frag.appendChild(h("span", { class: "cite-inline", text: m[1] }));
+        last = m.index + m[0].length;
+      }
+      frag.appendChild(document.createTextNode(text.slice(last)));
+      n.parentNode.replaceChild(frag, n);
+    });
+  }
   function externalLinks(scope) {
     $$(".prose a[href^='http']", scope).forEach(function (a) { a.target = "_blank"; a.rel = "noopener"; });
   }
   function watchStamps() {
+    /* Each verdict's figure counts up as it comes into view, then the stamp lands. */
+    var nums = $$(".v-num[data-to]");
+    if ("IntersectionObserver" in window && motion().animate && motion().count) {
+      var seen = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          seen.unobserve(en.target);
+          motion().count(en.target, Number(en.target.getAttribute("data-to")), { duration: 1.1 });
+        });
+      }, { threshold: 0.5 });
+      nums.forEach(function (n) { n.textContent = "0"; seen.observe(n); });
+    }
     var stamps = $$("[data-stamp]");
     stamps.forEach(function (s) { if (motion().animate) s.style.opacity = "0"; });
     if (!("IntersectionObserver" in window) || !motion().animate) { stamps.forEach(function (s) { s.style.opacity = ""; }); return; }
@@ -847,7 +882,7 @@
       entries.forEach(function (en, i) {
         if (!en.isIntersecting) return;
         io.unobserve(en.target);
-        setTimeout(function () { motion().stamp(en.target, -5); }, 350 + i * 220);
+        setTimeout(function () { motion().stamp(en.target, -5); }, 950 + i * 260);
       });
     }, { threshold: 0.6 });
     stamps.forEach(function (s) { io.observe(s); });
@@ -856,6 +891,7 @@
   /* -------------------------------------------------------------- run a turn */
   function clearTurnUI() {
     $("[data-results]").hidden = true;
+    state.analysisShown = false;
     state.letter = null;
     state.digest = null;
     $("[data-thread]").innerHTML = "";
@@ -866,7 +902,7 @@
     $("[data-ask-send]").disabled = on;
     $$('[data-action="sample-contract"], [data-action="use-paste"], [data-action="reset"]').forEach(function (b) { b.disabled = on; });
   }
-  function runTurn(path, payload, label, onFinal) {
+  function runTurn(path, payload, label, onFinal, onStep) {
     var pacer = new Pacer(motion().reduce ? 0 : state.mode === "llm" ? 60 : 130);
     var turnBase = state.spent;
     var failed = null;
@@ -883,6 +919,7 @@
         pacer.push(function () {
           addRow(data);
           if (data.cost_usd) showCost(turnBase + data.cost_usd);
+          if (onStep) onStep(data);
         });
       } else if (name === "final") {
         pacer.push(function () {
@@ -913,6 +950,8 @@
     if (motion().scrollTo) motion().scrollTo(window.matchMedia("(max-width: 960px)").matches ? $("[data-casefile]") : $(".workspace"));
     runTurn("api/analyze", form, "Analysis · " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), function (d) {
       state.firstRun = false;
+      state.analysisShown = true;
+      $$(".results-head, [data-verdicts], [data-bill]").forEach(function (el) { el.hidden = false; });
       renderResults(d);
       return sleep(motion().reduce ? 0 : 450).then(function () { if (motion().scrollTo) motion().scrollTo($("[data-results]")); });
     }).catch(function (e) { msg("run", e.message, true); });
@@ -934,6 +973,7 @@
     runTurn("api/ask", payload, "Question · " + (question.length > 46 ? question.slice(0, 45) + "…" : question), function (d) {
       working.remove();
       answer.innerHTML = d.answer_html;
+      markCitations(answer);
       externalLinks(item);
       var meta = [d.steps + (d.steps === 1 ? " step" : " steps"), d.elapsed_s + "s", usd(d.cost.usd)];
       item.appendChild(h("p", { class: "a-meta", text: meta.join(" · ") }));
@@ -941,9 +981,12 @@
         state.digest = state.digest || d;
         state.letter = d.letter;
         $("[data-results]").hidden = false;
+        if (!state.analysisShown) $$(".results-head, [data-verdicts], [data-bill]").forEach(function (el) { el.hidden = true; });
         renderLetter(d.letter.body_arabic && state.lastLanguage === "ar" ? "ar" : "en");
         toast("The letter panel has a new draft");
       }
+    }, function (step) {
+      working.textContent = step.agent + ": " + step.line;
     }).catch(function (e) {
       working.textContent = e.message;
       working.classList.add("is-error");

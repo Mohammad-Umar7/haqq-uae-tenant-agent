@@ -51,15 +51,19 @@
     function fmt(v) {
       return prefix + v.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + suffix;
     }
+    var id = (el._countId = (el._countId || 0) + 1);
     if (reduce || dur === 0) { el.textContent = fmt(to); return; }
     var start = performance.now();
     function tick(now) {
+      if (el._countId !== id) return;          // a newer count took over
       var p = Math.min(1, (now - start) / (dur * 1000));
       var e = 1 - Math.pow(1 - p, 4);
       el.textContent = fmt(from + (to - from) * e);
       if (p < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
+    // Frames pause in a background tab; the final figure must still land.
+    setTimeout(function () { if (el._countId === id) el.textContent = fmt(to); }, dur * 1000 + 80);
   };
 
   M.rowIn = function (el) {
@@ -82,7 +86,7 @@
       .fromTo(host, { y: 0 }, { y: 3, duration: 0.06, yoyo: true, repeat: 1, ease: "power1.out" }, ">-0.02");
   };
 
-  M.drawIcon = function (svg, delay) {
+  M.drawIcon = function (svg, delay, duration) {
     if (!animate || !svg) return;
     var parts = $$("path, circle, rect", svg);
     parts.forEach(function (p) {
@@ -90,7 +94,7 @@
       p.style.strokeDasharray = len;
       p.style.strokeDashoffset = len;
     });
-    gsap.to(parts, { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut", stagger: 0.07, delay: delay || 0 });
+    gsap.to(parts, { strokeDashoffset: 0, duration: duration || 1.4, ease: "power2.inOut", stagger: 0.07, delay: delay || 0, overwrite: true });
   };
 
   M.refresh = function () { if (ST) ST.refresh(); };
@@ -201,6 +205,10 @@
   }
   markReady.then(hero, hero);
 
+  /* As the hero scrolls away the mark drifts slower than the words: a little depth. */
+  gsap.to(".hero-mark .mark", { yPercent: 16, ease: "none",
+    scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true } });
+
   /* Section headlines: word by word. */
   $$("[data-split]").forEach(function (h) {
     gsap.fromTo(h.querySelectorAll(".wi"), { yPercent: 110 }, {
@@ -259,6 +267,13 @@
       $$(".agent-icon").forEach(function (icon, i) { M.drawIcon(icon, Math.min(i, 3) * 0.12); });
     } });
   });
+
+  /* Pointing at an agent redraws its icon. */
+  if (finePointer) {
+    $$(".agent-card").forEach(function (card) {
+      card.addEventListener("mouseenter", function () { M.drawIcon(card.querySelector(".agent-icon"), 0, 0.9); });
+    });
+  }
 
   /* Big honest figures settle in. */
   $$(".p-figure").forEach(function (el) {
