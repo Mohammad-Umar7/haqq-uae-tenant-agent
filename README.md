@@ -46,7 +46,7 @@ cp .env.example .env          # optional: paste your Anthropic key into .env
 python app.py
 ```
 
-Open http://127.0.0.1:7860, click **Load sample contract**, then **Analyze my contract**. Then try **Load sample notice** (the landlord's WhatsApp screenshot) and the **Arabic** letter option, and open **What the agents did** to watch the Critic at work.
+Open http://127.0.0.1:7860 and go to **§3 Check**: click **Use the sample contract**, then **Use the sample notice** (the landlord's WhatsApp screenshot), pick **Both** under *Write my letter in*, and **Run the check**. The case file on the right fills in live as each agent works, with a running cost; the findings, the letter (English and Arabic) and the footnoted law follow. The original Gradio interface is still at http://127.0.0.1:7860/classic.
 
 Run the tests with `python -m pytest`, and the eval with `python -m evals.run_eval`.
 
@@ -154,11 +154,23 @@ flowchart LR
 
 </details>
 
+### The website
+
+`python app.py` starts one uvicorn server (Hugging Face Spaces runs the same file):
+
+- `/` is the website: hand-written HTML, CSS and JavaScript in `web/`, no build step. Fonts come from Google Fonts; GSAP 3.12.5, ScrollTrigger and Lenis 1.1.13 from pinned CDN versions. It works without them (and without motion under *reduce motion*).
+- `/api/...` is its JSON API, in `webapi.py`: load the sample, upload or paste a contract, read a notice screenshot, and two **streaming** endpoints (`/api/analyze`, `/api/ask`) that send every `TraceEvent` as a server-sent event the moment it happens, then a `final` event with the findings, the letter(s), the law relied on and the cost. Sessions are per tab: a random token in the `X-Haqq-Session` header maps to the same `Session` the Gradio UI keeps (a header, not a cookie, because Spaces show the app in an iframe). Upload, page, question and spend limits all still apply.
+- `/classic` is the original Gradio interface, mounted as a fallback.
+
+ZeroGPU only lets a Space start after the `spaces` package reports its `@spaces.GPU` functions, which it normally does inside `gr.Blocks.launch()`. The server never calls that, so `app.py` sends the same startup report itself (`report_zerogpu_startup`).
+
 ### Project layout
 
 ```
 uae-tenant-agent/
-├── app.py                     Gradio UI and event wiring
+├── app.py                     server: website + API at /, Gradio UI at /classic
+├── webapi.py                  the website's JSON + streaming API (FastAPI)
+├── web/                       index.html, css/site.css, js/ (boot, motion, app), img/
 ├── agent/
 │   ├── config.py              env vars: key, model, effort, limits, cache
 │   ├── runner.py              one turn: limits -> result cache -> read once -> loop
@@ -307,11 +319,9 @@ The code column is in [`evals/RESULTS.md`](evals/RESULTS.md) (free, regenerated 
 
 The loop uses adaptive thinking with summarised reasoning (shown in the trace) and prompt caching. It is written for current Claude models (Haiku 5.5, Sonnet 5.5, Opus 5.5); older models such as Haiku 4.5 don't accept these request settings.
 
-## Deploying to Hugging Face Spaces (later)
+## Deploying to Hugging Face Spaces
 
-Not deployed yet. When you're ready:
-
-1. Create a Gradio Space, then push this folder (without `.env` and `.haqq_cache/`).
+1. Create a Gradio Space (the free ZeroGPU hardware works), then push this folder (without `.env` and `.haqq_cache/`).
 2. Put this block at the very top of `README.md` (Spaces reads it as config):
    ```yaml
    ---
@@ -335,7 +345,7 @@ Not deployed yet. When you're ready:
 - The Notice Reader can misread a blurry or cropped screenshot, and it can only see what the image shows (a WhatsApp date header, not when you actually opened the message). The tenant confirms every value before it is used.
 - Arabic letters are machine-translated by the Drafter. Their citations are converted by code and checked, but read the whole letter before sending, and check the citations against the Arabic originals (the Arabic text of the law prevails).
 - No market data: see "Market rent data" above. The RERA average must come from the official calculator.
-- The Claude paths are tested with a fake Claude (266 tests, no network) and checked with a handful of real runs on the sample, not on a large set of real contracts.
+- The Claude paths are tested with a fake Claude (289 tests, no network) and checked with a handful of real runs on the sample, not on a large set of real contracts.
 - Not a substitute for RERA, the RDSC or a lawyer.
 
 ---
