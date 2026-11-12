@@ -9,3 +9,10 @@ pydantic>=2.10,<3
 rank_bm25>=0.2.2,<0.3
 # Images: the Notice Reader checks and shrinks screenshots; scripts/make_sample_notice.py draws the sample.
 pillow>=12,<13
+# The website (web/) and its JSON API (webapi.py). FastAPI, uvicorn and python-multipart
+# also come with gradio; they are listed because app.py uses them directly.
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+python-multipart>=0.0.18
+# Markdown -> safe HTML for the answers shown on the website (raw HTML is escaped).
+markdown-it-py>=3,<5

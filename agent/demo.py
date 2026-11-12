@@ -65,7 +65,7 @@ def run_demo_analysis(ctx: ToolContext, inputs: TenantInputs) -> Iterator[TraceE
     events.append(TraceEvent("info", "Demo mode: running the tools in a fixed order", detail=DEMO_BANNER))
     if not ctx.contract_text:
         yield from flush()
-        yield TraceEvent("final", "answer", detail={"text": "Load a contract first (upload a PDF/TXT, paste the text, or click **Load sample contract**)."})
+        yield TraceEvent("final", "answer", detail={"text": "Load a contract first (upload a PDF/TXT, paste the text, or use the sample contract)."})
         return
 
     # 1. Read the contract.
@@ -302,6 +302,6 @@ def answer_demo_question(question: str, ctx: ToolContext) -> Iterator[TraceEvent
     else:
         lines = ["I couldn't find this in the law. Try words like *rent increase*, *notice*, *eviction*, "
                  "*deposit*, *Ejari* or *repairs*, or ask RERA or the RDSC.", ""]
-    lines.append("For a full review, click **Analyze my contract**. Add an ANTHROPIC_API_KEY to chat with the agent.")
+    lines.append("For a full review, run the contract analysis. With an ANTHROPIC_API_KEY the AI team answers questions in its own words.")
     lines.append(f"\n_{DISCLAIMER}_")
     yield TraceEvent("final", "answer", detail={"text": "\n".join(lines)})

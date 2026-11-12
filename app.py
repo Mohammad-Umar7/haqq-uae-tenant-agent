@@ -1,15 +1,20 @@
-"""Haqq - Dubai Tenant Rights Agent (Gradio UI).
+"""Haqq - Dubai Tenant Rights Agent: the server.
 
 Run locally:   python app.py   then open http://127.0.0.1:7860
 Hugging Face Spaces runs this same file.
 
-This file is only UI wiring. The agent lives in agent/loop.py, the tools in
+Two front ends share one agent:
+- /          the website (hand-written HTML/CSS/JS in web/, its JSON API in webapi.py)
+- /classic   the original Gradio interface, defined below, kept as a fallback
+
+This file is only wiring. The agent lives in agent/loop.py, the tools in
 agent/tools/, and the no-API-key fallback in agent/demo.py.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date
 from pathlib import Path
 
@@ -41,7 +46,7 @@ try:
     def _zerogpu_placeholder() -> None:
         return None
 except ImportError:
-    pass
+    spaces = None
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 settings = load_settings()
@@ -364,5 +369,38 @@ with gr.Blocks(title="Haqq - Dubai Tenant Rights Agent") as demo:
     reset_btn.click(new_conversation, [session_state], [session_state, chatbot, trace_md, *letter_outputs])
 
 
+# ------------------------------------------------------------------- server --
+
+def build_server():
+    """The website and its API at /, the Gradio interface above at /classic."""
+    from webapi import create_web_app
+
+    server = create_web_app(settings=settings, agent=agent, cache=cache)
+    # root_path: behind Hugging Face's proxy Gradio would otherwise build its asset URLs from the bare host.
+    return gr.mount_gradio_app(server, demo, path="/classic", root_path="/classic", theme=gr.themes.Soft(),
+                               css=CSS, ssr_mode=False)
+
+
+def report_zerogpu_startup() -> None:
+    """ZeroGPU checks for @spaces.GPU functions when the app starts. The `spaces` package runs that
+    check from inside gr.Blocks.launch(), which this server never calls (uvicorn serves the site and
+    the mounted Gradio UI), so run the same startup step here. Off ZeroGPU it does nothing."""
+    if spaces is None or os.getenv("SPACES_ZERO_GPU", "").lower() not in ("1", "t", "true"):
+        return
+    from spaces.zero import startup
+    from spaces.zero.gradio import _orig_launch
+
+    startup()
+    gr.Blocks.launch = _orig_launch   # the hook has done its job; never run it twice
+
+
 if __name__ == "__main__":
-    demo.launch(theme=gr.themes.Soft(), css=CSS)
+    import uvicorn
+
+    report_zerogpu_startup()
+    host = os.getenv("GRADIO_SERVER_NAME", "0.0.0.0")
+    port = int(os.getenv("GRADIO_SERVER_PORT") or os.getenv("PORT") or 7860)
+    print(f"Haqq is running at http://127.0.0.1:{port} (classic Gradio UI at /classic). "
+          f"Mode: {'LLM, ' + settings.model if settings.llm_enabled else 'demo (no API key)'}.", flush=True)
+    uvicorn.run(build_server(), host=host, port=port, proxy_headers=True, forwarded_allow_ips="*",
+                log_level="warning")

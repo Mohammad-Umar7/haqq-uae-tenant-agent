@@ -228,8 +228,13 @@ def run_turn(
     settings: Settings,
     agent: Any = None,
     cache: ResultCache | None = None,
+    meter: UsageMeter | None = None,
 ) -> Iterator[TraceEvent]:
-    """Run one turn and yield trace events; the last one is kind="final"."""
+    """Run one turn and yield trace events; the last one is kind="final".
+
+    `meter` lets the caller watch the running cost while the turn streams
+    (the website's cost ticker); by default the turn makes its own.
+    """
     if agent is None:   # demo mode: free, deterministic, no limits needed
         ctx = ToolContext(contract_text=session.contract_text, today=today, inputs=inputs)
         stream = run_demo_analysis(ctx, inputs) if analyze else answer_demo_question(user_text, ctx)
@@ -266,7 +271,7 @@ def run_turn(
             return
 
     session.llm_requests += 1
-    meter = UsageMeter(settings.model)
+    meter = meter if meter is not None else UsageMeter(settings.model)
     events: list[TraceEvent] = []
 
     # 3. Read the contract once.

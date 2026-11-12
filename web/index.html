@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en" data-mode="__MODE__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Haqq · Your rent. Your right.</title>
+<meta name="description" content="Haqq checks a Dubai tenancy contract against the official law: rent increase caps, notice deadlines and risky clauses, with a cited letter to the landlord in English or Arabic.">
+<meta name="theme-color" content="#F3EEE4">
+<link rel="icon" href="static/img/mark.svg?v=__V__" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&display=block&text=%D8%AD%D9%82">
+<link rel="stylesheet" href="static/css/site.css?v=__V__">
+<script src="static/js/boot.js?v=__V__"></script>
+</head>
+<body>
+<a class="skip" href="#check">Skip to the contract check</a>
+
+<!-- Line-art icons, drawn on a 48-unit grid. Strokes keep their width at any size. -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-orchestrator" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="5.5"/>
+      <circle cx="24" cy="7" r="2.6"/><circle cx="38.7" cy="15.5" r="2.6"/><circle cx="38.7" cy="32.5" r="2.6"/>
+      <circle cx="24" cy="41" r="2.6"/><circle cx="9.3" cy="32.5" r="2.6"/><circle cx="9.3" cy="15.5" r="2.6"/>
+      <path d="M24 18.5V9.6M28.8 21.2l7.6-4.4M28.8 26.8l7.6 4.4M24 29.5v8.9M19.2 26.8l-7.6 4.4M19.2 21.2l-7.6-4.4"/>
+    </symbol>
+    <symbol id="i-analyst" viewBox="0 0 48 48">
+      <path d="M12 5h15l8 8v29H12z"/><path d="M27 5v8h8"/>
+      <path d="M16.5 18h12M16.5 23.5h14M16.5 29h6"/>
+      <circle class="knock" cx="30" cy="32" r="6.5"/><path d="M34.8 36.8l6.2 6.2"/>
+    </symbol>
+    <symbol id="i-calculators" viewBox="0 0 48 48">
+      <path d="M5 42h38"/>
+      <path d="M8 42v-5h7v-5h7v-5h7v-5h7v-5h7"/>
+      <circle cx="11" cy="9.5" r="2.6"/><circle cx="20" cy="18.5" r="2.6"/><path d="M21.5 7.5l-12 13"/>
+    </symbol>
+    <symbol id="i-law" viewBox="0 0 48 48">
+      <path d="M24 13.5c-5-3.6-11.6-4-18-2v27c6.4-2 13-1.6 18 2 5-3.6 11.6-4 18-2v-27c-6.4-2-13-1.6-18 2z"/>
+      <path d="M24 13.5v27"/>
+      <path d="M10 19c3-.7 6.3-.6 9.5.4M10 24.5c3-.7 6.3-.6 9.5.4M10 30c3-.7 6.3-.6 9.5.4M28.5 24.9c3.2-1 6.5-1.1 9.5-.4M28.5 30.4c3.2-1 6.5-1.1 9.5-.4"/>
+      <path d="M31 11v9l2.5-2 2.5 2v-9.6"/>
+    </symbol>
+    <symbol id="i-drafter" viewBox="0 0 48 48">
+      <path d="M24 40L14.5 22.5 19 6h10l4.5 16.5z"/>
+      <path d="M24 40V27"/><circle cx="24" cy="24.5" r="2.4"/>
+      <path d="M16.6 14.5h14.8"/>
+      <path d="M31 44c2-1.8 3.6 1.8 5.6 0s3.6 1.8 5.6 0"/>
+    </symbol>
+    <symbol id="i-critic" viewBox="0 0 48 48">
+      <path d="M5 11h26M5 18h21M5 25h14"/>
+      <path d="M5 31.5c2.3-2.6 4.6 2.6 6.9 0s4.6 2.6 6.9 0 4.6 2.6 6.9 0"/>
+      <path d="M28.5 37.5l13-13 3.5 3.5-13 13-5 1.5z"/><path d="M38.5 27.5l3.5 3.5"/>
+    </symbol>
+    <symbol id="i-reader" viewBox="0 0 48 48">
+      <rect x="15" y="5" width="18" height="38" rx="3.5"/>
+      <path d="M21.5 9h5"/>
+      <rect x="18.5" y="14" width="10" height="6" rx="2"/><rect x="20.5" y="23" width="9" height="6" rx="2"/>
+      <path d="M7 11V6h5M36 6h5v5M41 37v5h-5M12 42H7v-5"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="progress" aria-hidden="true"><span></span></div>
+
+<header class="masthead" id="top">
+  <a class="brand" href="#top" aria-label="Haqq, back to the top">
+    <span class="brand-ar" lang="ar">حق</span>
+    <span class="brand-en">Haqq</span>
+  </a>
+  <nav class="masthead-nav" aria-label="Sections">
+    <a href="#problem" data-nav="problem"><span>§1</span> The rules</a>
+    <a href="#team" data-nav="team"><span>§2</span> The team</a>
+    <a href="#check" data-nav="check"><span>§3</span> Check</a>
+    <a href="#honest" data-nav="honest"><span>§4</span> Honesty</a>
+  </nav>
+  <div class="masthead-end">
+    <span class="mode-chip" data-mode-chip><i></i><span>Demo mode</span></span>
+    <a class="btn btn-ink btn-sm magnetic" href="#check">Check my contract</a>
+  </div>
+</header>
+
+<main>
+<!-- ============================================================== HERO -->
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <p class="overline" data-hero-fade>Dubai tenancy law <span class="sep">/</span> read, counted and cited for you</p>
+      <h1 id="hero-title" class="hero-title">
+        <span class="line"><span class="line-in">Your rent.</span></span>
+        <span class="line line-last"><span class="line-in">Your <em class="hl">right.<svg class="underline" viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M4 16c46-8 101-11 150-10 48 1 97 5 142 10"/></svg></em></span></span>
+      </h1>
+      <p class="hero-lead" data-hero-fade>Upload your tenancy contract and the landlord's message. Haqq checks the rent increase, the notice dates and every clause against Dubai's official law, cites the article behind each point, and drafts your reply in English or Arabic.</p>
+      <div class="hero-cta" data-hero-fade>
+        <a class="btn btn-ink magnetic" href="#check">Check my contract <span class="arrow" aria-hidden="true">↓</span></a>
+        <a class="btn btn-line" href="#team">Meet the team</a>
+      </div>
+    </div>
+
+    <aside class="hero-mark" aria-label="Haqq: Arabic for a right, and the truth">
+      <svg class="mark" viewBox="0 0 400 300" role="img" aria-label="حق">
+        <text class="mark-fill" x="200" y="214" text-anchor="middle" lang="ar">حق</text>
+        <text class="mark-stroke" x="200" y="214" text-anchor="middle" lang="ar">حق</text>
+      </svg>
+      <dl class="definition" data-hero-fade>
+        <dt><span lang="ar">حق</span> <i>ḥaqq</i> <small>noun, Arabic</small></dt>
+        <dd><span>1</span>a right; what is due to someone.</dd>
+        <dd><span>2</span>the truth; what is real and correct.</dd>
+      </dl>
+    </aside>
+  </div>
+
+  <dl class="ledger" aria-label="Haqq in numbers">
+    <div class="ledger-item" data-hero-fade>
+      <dt><span class="num" data-count="43" data-meta="law.in_force">43</span></dt>
+      <dd>articles of Dubai tenancy law in force, searchable word for word</dd>
+    </div>
+    <div class="ledger-item" data-hero-fade>
+      <dt><span class="num" data-count="290">290</span></dt>
+      <dd>automated tests, run with a fake Claude and no network</dd>
+    </div>
+    <div class="ledger-item" data-hero-fade>
+      <dt><span class="num">$0.017</span></dt>
+      <dd>for a full check with a reviewed letter, measured on the sample</dd>
+    </div>
+    <div class="ledger-item" data-hero-fade>
+      <dt><span class="num">5/5</span></dt>
+      <dd>planted mistakes caught by the Critic in its eval, with no false alarms</dd>
+    </div>
+  </dl>
+</section>
+
+<!-- ============================================================ §1 RULES -->
+<section class="rules" id="problem" aria-labelledby="problem-title">
+  <div class="section-head">
+    <p class="section-no">§1</p>
+    <h2 id="problem-title" class="section-title" data-split>Three numbers most tenants never see.</h2>
+    <p class="section-lead" data-reveal>Dubai's tenancy rules are short and exact. Landlords know them. Tenants usually meet them for the first time in a WhatsApp message.</p>
+  </div>
+
+  <div class="rules-grid">
+    <article class="rule" data-reveal>
+      <p class="rule-figure"><span class="big" data-count="90">90</span><span class="unit">days</span></p>
+      <h3>Notice of a rent increase</h3>
+      <p>A landlord who wants to raise the rent, or change any term, must tell you at least 90 days before the contract expires.</p>
+      <p class="cite">Law No. 26 of 2007, Art. 14</p>
+    </article>
+
+    <article class="rule rule-bands" data-reveal>
+      <p class="rule-figure"><span class="big">0<span class="dash">–</span>20</span><span class="unit">% cap</span></p>
+      <h3>How much it may rise</h3>
+      <p>The cap depends on how far your rent sits below the RERA Rental Index average for similar homes.</p>
+      <svg class="bands" viewBox="0 0 320 132" role="img" aria-label="Rent increase caps: up to 10% below average, no increase; 11 to 20% below, 5%; 21 to 30% below, 10%; 31 to 40% below, 15%; more than 40% below, 20%.">
+        <path class="bands-axis" d="M0 112h320"/>
+        <path class="bands-step" pathLength="1" d="M0 112h64v-20h64v-20h64v-20h64v-20h64"/>
+        <g class="bands-labels">
+          <text x="32" y="104">0%</text><text x="96" y="84">5%</text><text x="160" y="64">10%</text><text x="224" y="44">15%</text><text x="288" y="24">20%</text>
+          <text class="below" x="32" y="128">≤10</text><text class="below" x="96" y="128">11–20</text><text class="below" x="160" y="128">21–30</text><text class="below" x="224" y="128">31–40</text><text class="below" x="288" y="128">40+</text>
+        </g>
+      </svg>
+      <p class="bands-caption">% below the RERA average → maximum increase</p>
+      <p class="cite">Decree No. 43 of 2013, Art. 1</p>
+    </article>
+
+    <article class="rule" data-reveal>
+      <p class="rule-figure"><span class="big" data-count="12">12</span><span class="unit">months</span></p>
+      <h3>Notice to evict</h3>
+      <p>To end your tenancy for the owner's own use, a sale or a renovation, the landlord must give 12 months' notice by notary public or registered mail. A WhatsApp message does not count.</p>
+      <p class="cite">Law No. 26 of 2007, Art. 25(2)</p>
+    </article>
+  </div>
+</section>
+
+<!-- ============================================================= §2 TEAM -->
+<section class="team" id="team" aria-labelledby="team-title">
+  <div class="team-pin">
+    <div class="section-head team-head">
+      <p class="section-no">§2</p>
+      <h2 id="team-title" class="section-title" data-split>One orchestrator. Six specialists. One case file.</h2>
+      <p class="section-lead" data-reveal>An agent only needs AI when the job needs language or judgement. Anything that can be counted is counted by code, so a model never does the maths.</p>
+    </div>
+    <div class="team-stage">
+    <div class="team-viewport">
+      <ol class="team-track">
+        <li class="agent-card agent-lead">
+          <p class="agent-no">01</p>
+          <svg class="agent-icon" data-icon="orchestrator" aria-hidden="true"></svg>
+          <h3>Orchestrator</h3>
+          <p class="agent-how"><span class="tag tag-ai">AI</span> Claude, tool-use loop</p>
+          <p class="agent-job">Talks to you, decides which specialist to ask next, and writes the answer. Every other agent works for it.</p>
+          <p class="agent-tools">claude-haiku-5-5 · adaptive thinking</p>
+        </li>
+        <li class="agent-card">
+          <p class="agent-no">02</p>
+          <svg class="agent-icon" data-icon="analyst" aria-hidden="true"></svg>
+          <h3>Contract Analyst</h3>
+          <p class="agent-how"><span class="tag tag-ai">AI</span><span class="tag tag-code">Code</span> reads once, scans by rule</p>
+          <p class="agent-job">Reads the contract once into structured data, then scans every clause for red flags such as a “non-refundable” deposit.</p>
+          <p class="agent-tools">read_contract_once · clause_risk_scan</p>
+        </li>
+        <li class="agent-card">
+          <p class="agent-no">03</p>
+          <svg class="agent-icon" data-icon="calculators" aria-hidden="true"></svg>
+          <h3>Calculators</h3>
+          <p class="agent-how"><span class="tag tag-code">Code</span> plain Python</p>
+          <p class="agent-job">Works out the rent cap under Decree No. 43 of 2013 and the notice deadline under Law No. 26 of 2007. Arithmetic, not guesswork.</p>
+          <p class="agent-tools">rera_rent_increase_check · notice_deadline_check</p>
+        </li>
+        <li class="agent-card">
+          <p class="agent-no">04</p>
+          <svg class="agent-icon" data-icon="law" aria-hidden="true"></svg>
+          <h3>Law Researcher</h3>
+          <p class="agent-how"><span class="tag tag-code">Code</span> BM25 search</p>
+          <p class="agent-job">Finds the official article behind every point, and checks that each citation in the answer really came back from its search.</p>
+          <p class="agent-tools">search_tenancy_law · citation audit</p>
+        </li>
+        <li class="agent-card">
+          <p class="agent-no">05</p>
+          <svg class="agent-icon" data-icon="drafter" aria-hidden="true"></svg>
+          <h3>Drafter</h3>
+          <p class="agent-how"><span class="tag tag-code">Code</span><span class="tag tag-ai">AI</span> template, then Claude</p>
+          <p class="agent-job">Writes the first draft from a template, then revises it once after the Critic's review, in English, Arabic or both.</p>
+          <p class="agent-tools">draft_letter · revise_letter</p>
+        </li>
+        <li class="agent-card">
+          <p class="agent-no">06</p>
+          <svg class="agent-icon" data-icon="critic" aria-hidden="true"></svg>
+          <h3>Critic</h3>
+          <p class="agent-how"><span class="tag tag-ai">AI</span><span class="tag tag-code">Code</span> the landlord's lawyer</p>
+          <p class="agent-job">Attacks the draft's numbers, dates, citations and tone before your landlord can. A code check verifies every figure first.</p>
+          <p class="agent-tools">critic_review · automatic check</p>
+        </li>
+        <li class="agent-card">
+          <p class="agent-no">07</p>
+          <svg class="agent-icon" data-icon="reader" aria-hidden="true"></svg>
+          <h3>Notice Reader</h3>
+          <p class="agent-how"><span class="tag tag-ai">AI</span> Claude vision</p>
+          <p class="agent-job">Reads a screenshot of the landlord's message: the new rent, the date it was sent and how it was delivered. Text aimed at an AI is reported, never obeyed.</p>
+          <p class="agent-tools">read_notice_image</p>
+        </li>
+      </ol>
+    </div>
+      <div class="team-foot">
+        <p><span class="tag tag-ai">AI</span> calls Claude <span class="tag tag-code">Code</span> plain Python, no model</p>
+        <span class="team-progress"><i></i></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ §3 CHECK -->
+<section class="check" id="check" aria-labelledby="check-title">
+  <div class="section-head check-head">
+    <p class="section-no">§3</p>
+    <h2 id="check-title" class="section-title" data-split>Check your contract.</h2>
+    <p class="section-lead" data-reveal>Load the contract, add the landlord's notice if you have one, and put the team to work. Every step lands in the case file as it happens.</p>
+  </div>
+
+  <div class="notice-legal" role="note" data-reveal>
+    <p class="notice-label">Read this first</p>
+    <p data-disclaimer>Not legal advice. This tool quotes the official English translation of Dubai's tenancy law (the Arabic text prevails) and can be wrong or out of date. Verify with RERA or the Rental Disputes Settlement Centre (RDSC) before you act.</p>
+  </div>
+
+  <div class="workspace">
+    <div class="steps">
+      <p class="mode-note" data-mode-note></p>
+
+      <!-- Step 01: the contract -->
+      <section class="step" id="step-contract" aria-labelledby="s1-title">
+        <header class="step-head">
+          <span class="step-no">01</span>
+          <h3 id="s1-title">The contract</h3>
+          <span class="step-state" data-state="contract">Required</span>
+        </header>
+
+        <div class="sheet drop" data-drop="contract" tabindex="0" role="button" aria-label="Upload your tenancy contract, PDF or TXT">
+          <div class="sheet-empty">
+            <svg class="sheet-glyph" aria-hidden="true"><use href="#i-analyst"/></svg>
+            <p class="sheet-title">Drop your tenancy contract here</p>
+            <p class="sheet-sub" data-upload-limits>PDF or TXT · up to 5 MB · 10 pages</p>
+          </div>
+          <div class="sheet-loaded" hidden>
+            <div class="doc-meta">
+              <p class="doc-label" data-contract-label></p>
+              <p class="doc-status" data-contract-status></p>
+            </div>
+            <pre class="doc-preview" data-contract-preview></pre>
+            <p class="stamp stamp-ink" data-received aria-hidden="true"><span>Received</span><small data-received-date></small></p>
+          </div>
+          <input type="file" id="contract-file" accept=".pdf,.txt,application/pdf,text/plain" hidden>
+        </div>
+
+        <div class="step-actions">
+          <button class="btn btn-line btn-sm" type="button" data-action="pick-contract">Choose a file</button>
+          <button class="btn btn-line btn-sm" type="button" data-action="toggle-paste" aria-expanded="false" aria-controls="paste-box">Paste the text</button>
+          <button class="btn btn-text btn-sm" type="button" data-action="sample-contract">Use the sample contract <span aria-hidden="true">→</span></button>
+        </div>
+        <div class="paste" id="paste-box" hidden>
+          <label class="field-label" for="paste-text">Contract text</label>
+          <textarea id="paste-text" rows="8" placeholder="Paste the full text of your tenancy contract"></textarea>
+          <button class="btn btn-ink btn-sm" type="button" data-action="use-paste">Use this text</button>
+        </div>
+        <p class="step-msg" data-msg="contract" role="status" aria-live="polite"></p>
+      </section>
+
+      <!-- Step 02: the notice -->
+      <section class="step" id="step-notice" aria-labelledby="s2-title">
+        <header class="step-head">
+          <span class="step-no">02</span>
+          <h3 id="s2-title">The landlord's notice</h3>
+          <span class="step-state" data-state="notice">Optional</span>
+        </header>
+
+        <div class="notice-grid">
+          <div class="shot">
+            <div class="sheet drop drop-shot" data-drop="notice" tabindex="0" role="button" aria-label="Upload a screenshot of the landlord's message">
+              <div class="sheet-empty">
+                <svg class="sheet-glyph" aria-hidden="true"><use href="#i-reader"/></svg>
+                <p class="sheet-title">Drop a screenshot</p>
+                <p class="sheet-sub">WhatsApp, SMS or email · PNG, JPG, WEBP</p>
+              </div>
+              <img class="shot-img" alt="The landlord's notice you uploaded" hidden>
+              <input type="file" id="notice-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+            </div>
+            <div class="step-actions">
+              <button class="btn btn-line btn-sm" type="button" data-action="pick-notice">Choose a screenshot</button>
+              <button class="btn btn-text btn-sm" type="button" data-action="sample-notice">Use the sample notice <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
+
+          <div class="reading" data-reading hidden>
+            <p class="reading-label">Read by the Notice Reader</p>
+            <dl class="reading-list" data-reading-list></dl>
+            <div class="warning" data-reading-warning hidden>
+              <p class="warning-label">Ignored: text aimed at an AI</p>
+              <blockquote data-reading-warning-text></blockquote>
+              <p class="warning-foot">The screenshot is treated as data, never as instructions. Haqq reported this line instead of following it.</p>
+            </div>
+            <p class="reading-foot">Copied into the form below. Check every value before you run.</p>
+          </div>
+        </div>
+        <p class="step-msg" data-msg="notice" role="status" aria-live="polite"></p>
+
+        <form class="form" data-form autocomplete="off" novalidate>
+          <div class="field">
+            <label class="field-label" for="f-rera">RERA average rent for similar homes <em>AED a year</em></label>
+            <input id="f-rera" name="rera_average_rent" inputmode="numeric" placeholder="e.g. 100,000">
+            <p class="field-help">From the official DLD/RERA Rental Index calculator. Dubai updated the index in 2025, so use a current figure.</p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="f-proposed">The landlord's proposed new rent <em>AED a year</em></label>
+            <input id="f-proposed" name="proposed_new_rent" inputmode="numeric" placeholder="e.g. 93,500">
+          </div>
+          <fieldset class="field field-wide">
+            <legend class="field-label">What did the notice say?</legend>
+            <div class="seg choices" data-seg="notice_type"></div>
+          </fieldset>
+          <div class="field">
+            <label class="field-label" for="f-date">Date you received it</label>
+            <input id="f-date" name="notice_date" type="date">
+          </div>
+          <div class="field">
+            <label class="field-label" for="f-method">How it was delivered</label>
+            <div class="select"><select id="f-method" name="delivery_method"></select></div>
+          </div>
+          <fieldset class="field field-wide">
+            <legend class="field-label">Write my letter in</legend>
+            <div class="seg seg-lang" data-seg="letter_language"></div>
+            <p class="field-help" data-lang-help>Arabic letters are translated by the Drafter; their legal citations are converted by code, never by the AI.</p>
+          </fieldset>
+        </form>
+      </section>
+
+      <!-- Step 03: run -->
+      <section class="step step-run" id="step-run" aria-labelledby="s3-title">
+        <header class="step-head">
+          <span class="step-no">03</span>
+          <h3 id="s3-title">Put the team to work</h3>
+        </header>
+        <div class="run-row">
+          <button class="btn btn-run magnetic" type="button" data-action="run" disabled>
+            <span class="btn-run-label">Run the check</span>
+            <span class="btn-run-sub" data-run-sub>Load a contract first</span>
+          </button>
+          <p class="run-note" data-run-note></p>
+        </div>
+        <p class="step-msg" data-msg="run" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <!-- The live case file -->
+    <aside class="casefile" aria-labelledby="cf-title" data-casefile>
+      <header class="cf-head">
+        <div>
+          <p class="cf-kicker">Case file</p>
+          <h3 id="cf-title" class="cf-id" data-cf-id>HQ · not opened</h3>
+        </div>
+        <p class="cf-status" data-cf-status>Idle</p>
+      </header>
+      <dl class="cf-meters">
+        <div><dt>Spent</dt><dd class="cf-cost" data-cf-cost>$0.0000</dd></div>
+        <div><dt>Steps</dt><dd data-cf-steps>0</dd></div>
+        <div><dt>Time</dt><dd data-cf-time>0.0s</dd></div>
+      </dl>
+      <ol class="cf-rail" data-cf-rail aria-label="Who is working"></ol>
+      <ol class="cf-log" data-cf-log aria-live="polite" data-lenis-prevent>
+        <li class="cf-empty">
+          <p>The case file is empty. When you run the check, each step lands here as it happens: who did it, what they found and what it cost. A typical analysis:</p>
+          <ol class="cf-plan">
+            <li><span>Contract Analyst</span> reads the terms, scans every clause</li>
+            <li><span>Calculators</span> work out the rent cap and the notice deadline</li>
+            <li><span>Law Researcher</span> fetches the official articles</li>
+            <li><span>Drafter</span> writes the letter to your landlord</li>
+            <li><span>Critic</span> checks every figure in it against this file</li>
+          </ol>
+        </li>
+      </ol>
+    </aside>
+  </div>
+
+  <!-- ============================================== RESULTS -->
+  <div class="results" data-results hidden>
+    <header class="results-head">
+      <p class="section-no">§3.1</p>
+      <h2 class="results-title">Findings</h2>
+      <p class="results-meta" data-results-meta></p>
+    </header>
+
+    <div class="verdicts" data-verdicts></div>
+
+    <div class="terms" data-terms-wrap hidden>
+      <p class="block-label">The contract, as the Contract Analyst read it</p>
+      <dl class="terms-grid" data-terms></dl>
+    </div>
+
+    <div class="flags-wrap" data-flags-wrap hidden>
+      <p class="block-label" data-flags-label>Red flags</p>
+      <ol class="flags" data-flags></ol>
+    </div>
+
+    <div class="answer" data-answer-wrap hidden>
+      <p class="block-label" data-answer-label>The team's answer</p>
+      <div class="prose" data-answer></div>
+    </div>
+    <details class="report" data-report-wrap hidden>
+      <summary>The full report as text</summary>
+      <div class="prose" data-report></div>
+    </details>
+
+    <section class="letter" data-letter-wrap hidden aria-labelledby="letter-title">
+      <header class="letter-head">
+        <div>
+          <p class="block-label">Draft · check every fact before you send it</p>
+          <h3 id="letter-title" class="letter-title">Your letter to the landlord</h3>
+          <p class="letter-version" data-letter-version></p>
+        </div>
+        <div class="letter-tools">
+          <div class="tabs" role="tablist" aria-label="Letter language">
+            <button role="tab" type="button" class="tab" data-letter-tab="en" aria-selected="true">English</button>
+            <button role="tab" type="button" class="tab" data-letter-tab="ar" aria-selected="false" lang="ar">العربية</button>
+          </div>
+          <button class="btn btn-line btn-sm" type="button" data-action="copy-letter">Copy</button>
+          <button class="btn btn-line btn-sm" type="button" data-action="download-letter">Download .txt</button>
+        </div>
+      </header>
+      <div class="letter-paper">
+        <div class="letter-body" data-letter-body tabindex="0"></div>
+        <div class="letter-note" data-letter-note hidden></div>
+      </div>
+      <div class="review" data-review></div>
+    </section>
+
+    <section class="footnotes" data-law-wrap hidden aria-labelledby="law-title">
+      <h3 id="law-title" class="block-label">Law relied on · official text</h3>
+      <ol class="notes" data-law></ol>
+      <p class="notes-foot">The English text is an official translation published on the Dubai Legislation Portal; the Arabic original prevails.</p>
+    </section>
+
+    <section class="bill" data-bill aria-label="What this check cost"></section>
+  </div>
+
+  <!-- ============================================== FOLLOW-UP -->
+  <section class="ask" id="ask" aria-labelledby="ask-title">
+    <header class="ask-head">
+      <p class="section-no">§3.2</p>
+      <h3 id="ask-title" class="ask-title">Ask the team</h3>
+      <p class="ask-lead" data-ask-lead>A follow-up about the same contract: deposits, eviction, repairs, a complaint to the RDSC.</p>
+    </header>
+    <ol class="thread" data-thread></ol>
+    <form class="ask-form" data-ask-form>
+      <label class="sr-only" for="ask-input">Your question</label>
+      <textarea id="ask-input" rows="1" maxlength="2000" placeholder="Can my landlord keep my security deposit?"></textarea>
+      <button class="btn btn-ink" type="submit" data-ask-send>Ask</button>
+    </form>
+    <div class="suggest" data-suggest>
+      <button type="button">Can my landlord keep my security deposit?</button>
+      <button type="button">My landlord wants me out to sell the flat. How much notice do they need?</button>
+      <button type="button">Is my landlord's rent increase legal?</button>
+      <button type="button">Draft an RDSC complaint summary about the rent increase.</button>
+    </div>
+    <div class="ask-foot">
+      <button class="btn btn-text btn-sm" type="button" data-action="reset">Start a new conversation</button>
+      <p class="ask-limit" data-ask-limit></p>
+    </div>
+  </section>
+</section>
+
+<!-- =========================================================== §4 HONEST -->
+<section class="honest" id="honest" aria-labelledby="honest-title">
+  <div class="section-head">
+    <p class="section-no">§4</p>
+    <h2 id="honest-title" class="section-title" data-split>How it stays honest.</h2>
+    <p class="section-lead" data-reveal>Four rules the team cannot break, and the numbers from its own tests. The weak spots are listed too.</p>
+  </div>
+
+  <ol class="principles">
+    <li class="principle" data-reveal>
+      <p class="p-figure">21<span>/21</span></p>
+      <div>
+        <h3>The maths is code.</h3>
+        <p>Rent bands and notice deadlines are calculated in Python, never by the model. On 11 synthetic Dubai contracts the calculators' verdicts were right 21 times out of 21, and the rent band 10 out of 10.</p>
+        <p class="src">evals/RESULTS.md</p>
+      </div>
+    </li>
+    <li class="principle" data-reveal>
+      <p class="p-figure" data-meta="law.in_force">43</p>
+      <div>
+        <h3>Every citation is checked.</h3>
+        <p>The Law Researcher searches the official text of the articles in force, taken from the Dubai Legislation Portal. Any citation in an answer that its search did not return is flagged for you to verify.</p>
+        <p class="src">agent/knowledge_base/law_articles.json</p>
+      </div>
+    </li>
+    <li class="principle" data-reveal>
+      <p class="p-figure">5<span>/5</span></p>
+      <div>
+        <h3>A Critic attacks every letter.</h3>
+        <p>Before you see a letter, a second Claude call reads it as the landlord's lawyer. In its eval it caught all five planted mistakes with no false alarm on the clean letter; the free automatic check alone caught two.</p>
+        <p class="src">evals/CRITIC_RESULTS.md</p>
+      </div>
+    </li>
+    <li class="principle" data-reveal>
+      <p class="p-figure p-quote" aria-hidden="true">“ ”</p>
+      <div>
+        <h3>Uploads are data, never instructions.</h3>
+        <p>The sample notice hides a line telling the AI to make the tenant accept the increase. The Notice Reader copies it into a warning for you instead of obeying it. Contracts get the same treatment.</p>
+        <p class="src">agent/team/notice_reader.py</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="shortfall" data-reveal>
+    <p class="block-label">Where it falls short</p>
+    <p>The keyword red-flag scan found 12 of 15 planted red flags (80% recall) and raised one false one (92.3% precision). Reworded clauses slip past keyword rules. In full AI mode Claude also reads every clause, but how much of the gap that closes has not been measured yet. The law base covers the core tenancy law and the rent decree, not every regulation, and it is only as current as its last update.</p>
+  </div>
+</section>
+</main>
+
+<footer class="colophon">
+  <div class="colophon-mark" lang="ar" aria-hidden="true">حق</div>
+  <div class="colophon-body">
+    <p class="colophon-legal" data-disclaimer>Not legal advice. This tool quotes the official English translation of Dubai's tenancy law (the Arabic text prevails) and can be wrong or out of date. Verify with RERA or the Rental Disputes Settlement Centre (RDSC) before you act.</p>
+    <ul class="colophon-links">
+      <li><a href="https://github.com/Mohammad-Umar7/haqq-uae-tenant-agent" target="_blank" rel="noopener">Source code on GitHub ↗</a></li>
+      <li><a href="classic/">The classic interface</a></li>
+      <li><a href="https://dlp.dubai.gov.ae/" target="_blank" rel="noopener">Dubai Legislation Portal ↗</a></li>
+    </ul>
+    <p class="colophon-small">Built for the Decoding Data Science Agentic AI Challenge, November 2026. The sample contract, notice and people in it are fictional. <span data-colophon-mode></span></p>
+  </div>
+</footer>
+
+<div class="toast" data-toast role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" defer></script>
+<script src="static/js/motion.js?v=__V__" defer></script>
+<script src="static/js/app.js?v=__V__" defer></script>
+</body>
+</html>
