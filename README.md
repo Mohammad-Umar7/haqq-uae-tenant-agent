@@ -1,5 +1,8 @@
 # Haqq: Dubai Tenant Rights Agent
 
+**Try it live:** https://huggingface.co/spaces/Mohammad-Umer7/haqq-uae-tenant-agent
+(click "Load sample contract", then "Analyze my contract". Without an API key on the Space it runs in free demo mode.)
+
 > **Not legal advice.** Haqq quotes the official English translation of Dubai's tenancy law (the Arabic text prevails) and can be wrong or out of date. Verify with RERA or the Rental Disputes Settlement Centre (RDSC) before you act on anything it says.
 
 *Haqq* (حق) means "right" in Arabic. Working name of the project: "UAE Tenant Rights Agent". The law it knows is **Dubai's**; other emirates have different laws.

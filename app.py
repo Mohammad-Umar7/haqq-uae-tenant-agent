@@ -31,6 +31,18 @@ from agent.trace import TraceEvent, latest_letter, render_trace_markdown
 
 SAMPLE_PATH = Path(__file__).parent / "samples" / "sample_contract.txt"
 
+# Free Hugging Face Spaces run on ZeroGPU hardware, which refuses to start an app that has no
+# @spaces.GPU function. Haqq needs no GPU (Claude runs in the cloud and the tools are plain Python),
+# so this placeholder only satisfies that check. Locally the `spaces` package is absent and it is skipped.
+try:
+    import spaces
+
+    @spaces.GPU(duration=5)
+    def _zerogpu_placeholder() -> None:
+        return None
+except ImportError:
+    pass
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 settings = load_settings()
 agent = TenantAgent(settings) if settings.llm_enabled else None
