@@ -58,6 +58,7 @@ from agent.law_search import LAW_PATH
 from agent.prompts import ANALYZE_REQUEST
 from agent.result_cache import ResultCache
 from agent.roster import CRITIC, ROSTER
+from agent.daily_budget import DailyBudget
 from agent.runner import Session, read_notice, run_turn
 from agent.team.arabic import ARABIC_SOURCES
 from agent.team.notice_reader import DELIVERY_LABELS, SAMPLE_NOTICE
@@ -573,13 +574,21 @@ def create_web_app(
     web_dir: Path = WEB_DIR,
     today: Callable[[], date] = date.today,
     store: SessionStore | None = None,
+    budget: DailyBudget | None = None,
 ) -> FastAPI:
-    """The FastAPI app: the website, its API, and nothing else (app.py mounts the classic UI)."""
+    """The FastAPI app: the website, its API, and nothing else (app.py mounts the classic UI).
+
+    `budget` is the app-wide daily spend limit; once it is used up, requests run in demo mode.
+    """
     app = FastAPI(title="Haqq", docs_url=None, redoc_url=None, openapi_url=None)
     store = store or SessionStore()
     app.state.sessions = store
     llm = agent is not None
     max_upload = int(settings.max_upload_mb * 1_048_576)
+
+    def llm_now() -> bool:
+        """AI mode for this request: a key, and today's budget not used up."""
+        return llm and not (budget is not None and budget.exhausted())
 
     page_cache: dict[str, Any] = {}
 
@@ -634,16 +643,19 @@ def create_web_app(
     def meta(request: Request) -> JSONResponse:
         token, entry = session_for(request)
         contract = entry.session.contract
+        live = llm_now()
         return reply(token, {
-            "mode": "llm" if llm else "demo",
-            "model": settings.model if llm else None,
-            "effort": settings.effort if llm else None,
+            "mode": "llm" if live else "demo",
+            "model": settings.model if live else None,
+            "effort": settings.effort if live else None,
+            "daily_budget_used_up": llm and not live,
             "limits": {
                 "max_upload_mb": settings.max_upload_mb,
                 "max_pdf_pages": settings.max_pdf_pages,
                 "max_requests_per_session": settings.max_requests_per_session,
                 "max_cost_per_run_usd": settings.max_cost_per_run_usd,
                 "max_cost_per_run": format_usd(settings.max_cost_per_run_usd),
+                "max_daily_spend_usd": settings.max_daily_spend_usd,
                 "max_question_chars": MAX_QUESTION_CHARS,
             },
             "requests_used": entry.session.llm_requests,
@@ -688,7 +700,7 @@ def create_web_app(
                     path = Path(tmp) / _safe_name(file.filename, "contract.pdf")
                     path.write_bytes(data)
                     contract = load_contract_upload(path, max_bytes=max_upload, max_pages=settings.max_pdf_pages)
-                if contract.needs_document_block and not llm:
+                if contract.needs_document_block and not llm_now():
                     raise ContractLoadError(
                         "This PDF has no usable English text (it looks scanned or Arabic-only). Demo mode can only "
                         "read text: paste the text instead.")
@@ -723,7 +735,7 @@ def create_web_app(
 
     def _read(entry: _Entry, path: str) -> list[TraceEvent]:
         try:
-            return list(read_notice(entry.session, path, settings=settings, agent=agent, cache=cache))
+            return list(read_notice(entry.session, path, settings=settings, agent=agent, cache=cache, budget=budget))
         finally:
             entry.busy_since = None
 
@@ -758,16 +770,17 @@ def create_web_app(
     # ---- step 3: the analysis and follow-up questions (streamed) ----
 
     def _turn(entry: _Entry, user_text: str, analyze: bool, inputs: TenantInputs) -> Iterator[bytes]:
-        meter = UsageMeter(settings.model) if llm else None
+        live = llm_now()
+        meter = UsageMeter(settings.model) if live else None
         started = time.perf_counter()
         events: list[TraceEvent] = []
-        yield _sse("start", {"mode": "llm" if llm else "demo", "analyze": analyze})
+        yield _sse("start", {"mode": "llm" if live else "demo", "analyze": analyze})
         stream = run_turn(entry.session, user_text, analyze=analyze, inputs=inputs, today=today(),
-                          settings=settings, agent=agent, cache=cache, meter=meter)
+                          settings=settings, agent=agent if live else None, cache=cache, meter=meter, budget=budget)
         for ev in stream:   # read to the end: run_turn caches the answer after its last event
             elapsed = time.perf_counter() - started
             if ev.kind == "final":
-                digest = build_digest(events, ev, language=inputs.letter_language, llm=llm)
+                digest = build_digest(events, ev, language=inputs.letter_language, llm=live)
                 digest["elapsed_s"] = round(elapsed, 1)
                 digest["requests_used"] = entry.session.llm_requests
                 yield _sse("final", digest)
@@ -775,7 +788,7 @@ def create_web_app(
             events.append(ev)
             yield _sse("step", serialize(ev, elapsed, meter.cost_usd if meter else 0.0))
             if (letter := latest_letter([ev])) is not None:
-                yield _sse("letter", _letter_payload(letter, inputs.letter_language, llm))
+                yield _sse("letter", _letter_payload(letter, inputs.letter_language, live))
 
     async def _stream(entry: _Entry, user_text: str, analyze: bool, inputs: TenantInputs):
         """Run the turn in a worker thread; send each event as soon as it exists."""

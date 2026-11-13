@@ -21,6 +21,7 @@ from pathlib import Path
 import gradio as gr
 
 from agent.config import load_settings
+from agent.daily_budget import shared_budget
 from agent.contract import ContractLoadError, LoadedContract, load_contract_upload
 from agent.cost import format_usd
 from agent.inputs import TenantInputs
@@ -52,6 +53,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 settings = load_settings()
 agent = TenantAgent(settings) if settings.llm_enabled else None
 cache = ResultCache(settings.cache_dir, enabled=settings.cache_enabled) if settings.llm_enabled else None
+budget = shared_budget(settings) if settings.llm_enabled else None   # app-wide daily spend limit
 
 
 # ---------------------------------------------------------------- contract --
@@ -122,7 +124,7 @@ def read_notice_image(image_path: str | None, session: Session):
         yield session, "_Upload a screenshot of the landlord's message first._", *unchanged, gr.update()
         return
     yield session, "_The Notice Reader is reading the screenshot..._", *unchanged, gr.update()
-    events = list(read_notice(session, image_path, settings=settings, agent=agent, cache=cache))
+    events = list(read_notice(session, image_path, settings=settings, agent=agent, cache=cache, budget=budget))
     final = events[-1].detail
     trace = render_trace_markdown(events[:-1])
     reading = final["reading"]
@@ -183,7 +185,7 @@ def _run_turn(user_text: str, display_text: str, analyze: bool, session: Session
     letter_out = (gr.update(),) * 3   # the Letter panel changes only when the team writes a letter
     stream = run_turn(
         session, user_text, analyze=analyze, inputs=inputs, today=date.today(),
-        settings=settings, agent=agent, cache=cache,
+        settings=settings, agent=agent, cache=cache, budget=budget,
     )
 
     for event in stream:
@@ -227,7 +229,8 @@ if settings.llm_enabled:
         "The Orchestrator (Claude) decides which specialist to ask; every letter is attacked by the Critic "
         "(the landlord's lawyer) and revised once. Open *What the agents did* to watch, including what each "
         f"agent cost. Spend limit: {format_usd(settings.max_cost_per_run_usd)} per analysis (all agents together), "
-        f"{settings.max_requests_per_session} questions per session."
+        f"{settings.max_requests_per_session} questions per session, {format_usd(settings.max_daily_spend_usd)} "
+        "a day for the whole app (then demo mode until midnight Dubai time)."
     )
 else:
     MODE_MD = (
@@ -375,7 +378,7 @@ def build_server():
     """The website and its API at /, the Gradio interface above at /classic."""
     from webapi import create_web_app
 
-    server = create_web_app(settings=settings, agent=agent, cache=cache)
+    server = create_web_app(settings=settings, agent=agent, cache=cache, budget=budget)
     # root_path: behind Hugging Face's proxy Gradio would otherwise build its asset URLs from the bare host.
     return gr.mount_gradio_app(server, demo, path="/classic", root_path="/classic", theme=gr.themes.Soft(),
                                css=CSS, ssr_mode=False)

@@ -217,10 +217,13 @@ def sample_reading(image: NoticeImage) -> NoticeReading | None:
 READER_FINGERPRINT = make_key(READER_VERSION, READER_SYSTEM, READER_REQUEST, json.dumps(READER_SCHEMA, sort_keys=True))
 
 
-def run_notice_reader(image: NoticeImage, client: Any, settings: Settings,
-                      cache: ResultCache | None = None) -> Generator[TraceEvent, None, NoticeReading | None]:
-    """Read one screenshot. Yields trace events; returns the reading (or None on failure)."""
-    meter = UsageMeter(settings.model)
+def run_notice_reader(image: NoticeImage, client: Any, settings: Settings, cache: ResultCache | None = None,
+                      meter: UsageMeter | None = None) -> Generator[TraceEvent, None, NoticeReading | None]:
+    """Read one screenshot. Yields trace events; returns the reading (or None on failure).
+
+    Pass `meter` to see what the reading cost (the app's daily limit adds it up).
+    """
+    meter = meter if meter is not None else UsageMeter(settings.model)
     key = make_key("notice", READER_FINGERPRINT, settings.model, image.sha256)
     cached = cache.get(key) if cache else None
     yield TraceEvent("tool_call", "read_notice_image", agent=NOTICE_READER, detail={

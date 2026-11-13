@@ -39,6 +39,8 @@ class Settings:
     # Spend guards for a public deploy (see README "Cost & efficiency").
     max_cost_per_run_usd: float = 0.05
     max_requests_per_session: int = 20
+    # All visitors together: past this, the app answers in demo mode until midnight (Dubai time).
+    max_daily_spend_usd: float = 1.0
     max_upload_mb: float = 5.0
     max_pdf_pages: int = 10
     # Free repeats: identical requests are answered from a local cache.
@@ -95,6 +97,7 @@ def load_settings() -> Settings:
         max_tool_rounds=_int("AGENT_MAX_TOOL_ROUNDS", 10),
         max_cost_per_run_usd=_float("HAQQ_MAX_COST_PER_RUN_USD", 0.05),
         max_requests_per_session=_int("HAQQ_MAX_REQUESTS_PER_SESSION", 20),
+        max_daily_spend_usd=_float("HAQQ_MAX_DAILY_SPEND_USD", 1.0),
         max_upload_mb=_float("HAQQ_MAX_UPLOAD_MB", 5.0),
         max_pdf_pages=_int("HAQQ_MAX_PDF_PAGES", 10),
         cache_enabled=_bool("HAQQ_CACHE_ENABLED", True),

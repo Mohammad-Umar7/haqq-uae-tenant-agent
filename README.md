@@ -273,7 +273,7 @@ What keeps it cheap:
 | Free checks first | `agent/team/checks.py` | numbers, dates and citations are checked by code, not by tokens |
 | Shrunk screenshots | `agent/team/notice_reader.py` | images over 1568 px are scaled down before sending |
 
-**Spend guards for a public deploy**: a maximum cost per analysis that covers **every agent together** (`HAQQ_MAX_COST_PER_RUN_USD`, default $0.05, about 3x a normal run; it is checked before every Claude call, the loop stops gracefully and shows what it had, and the drafting team falls back to the best letter it has), a per-session question limit that also counts screenshot readings (`HAQQ_MAX_REQUESTS_PER_SESSION`, default 20), an upload size limit for contracts and screenshots (`HAQQ_MAX_UPLOAD_MB`, default 5 MB), a page limit (`HAQQ_MAX_PDF_PAGES`, default 10), and the tool-round limit (`AGENT_MAX_TOOL_ROUNDS`, default 10). `HAQQ_CRITIC_ENABLED=false` turns the Claude review off (the free automatic check still runs). Every run's usage and cost is also written to the log (`haqq.cost`).
+**Spend guards for a public deploy**: a maximum cost per analysis that covers **every agent together** (`HAQQ_MAX_COST_PER_RUN_USD`, default $0.05, about 3x a normal run; it is checked before every Claude call, the loop stops gracefully and shows what it had, and the drafting team falls back to the best letter it has), a per-session question limit that also counts screenshot readings (`HAQQ_MAX_REQUESTS_PER_SESSION`, default 20), a daily limit for the whole app, all visitors together (`HAQQ_MAX_DAILY_SPEND_USD`, default $1; past it the app answers in free demo mode until midnight Dubai time), an upload size limit for contracts and screenshots (`HAQQ_MAX_UPLOAD_MB`, default 5 MB), a page limit (`HAQQ_MAX_PDF_PAGES`, default 10), and the tool-round limit (`AGENT_MAX_TOOL_ROUNDS`, default 10). `HAQQ_CRITIC_ENABLED=false` turns the Claude review off (the free automatic check still runs). Every run's usage and cost is also written to the log (`haqq.cost`).
 
 ## Evals
 
@@ -313,6 +313,7 @@ The code column is in [`evals/RESULTS.md`](evals/RESULTS.md) (free, regenerated 
 | `AGENT_MAX_TOOL_ROUNDS` | `10` | Safety limit on tool-call rounds per question. |
 | `HAQQ_MAX_COST_PER_RUN_USD` | `0.05` | Stop an analysis once it has cost this much. |
 | `HAQQ_MAX_REQUESTS_PER_SESSION` | `20` | LLM questions allowed per browser session (cache hits are free). |
+| `HAQQ_MAX_DAILY_SPEND_USD` | `1.0` | Claude spend per day for the whole app; then demo mode until midnight (Dubai time). |
 | `HAQQ_MAX_UPLOAD_MB` / `HAQQ_MAX_PDF_PAGES` | `5` / `10` | Upload limits. |
 | `HAQQ_CACHE_ENABLED` / `HAQQ_CACHE_DIR` | `true` / `.haqq_cache` | Free repeats. The folder is git-ignored. |
 | `HAQQ_CRITIC_ENABLED` | `true` | The Critic's Claude review of every letter and the Drafter's revision. `false` = template letter + free automatic check (an Arabic version is still written if asked for). |
@@ -345,7 +346,7 @@ The loop uses adaptive thinking with summarised reasoning (shown in the trace) a
 - The Notice Reader can misread a blurry or cropped screenshot, and it can only see what the image shows (a WhatsApp date header, not when you actually opened the message). The tenant confirms every value before it is used.
 - Arabic letters are machine-translated by the Drafter. Their citations are converted by code and checked, but read the whole letter before sending, and check the citations against the Arabic originals (the Arabic text of the law prevails).
 - No market data: see "Market rent data" above. The RERA average must come from the official calculator.
-- The Claude paths are tested with a fake Claude (289 tests, no network) and checked with a handful of real runs on the sample, not on a large set of real contracts.
+- The Claude paths are tested with a fake Claude (297 tests, no network) and checked with a handful of real runs on the sample, not on a large set of real contracts.
 - Not a substitute for RERA, the RDSC or a lawyer.
 
 ---

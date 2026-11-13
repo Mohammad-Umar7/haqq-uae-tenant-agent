@@ -3,6 +3,7 @@
 app.py calls run_turn() and renders the TraceEvents it yields. Keeping this
 out of app.py means it can be tested without Gradio. A turn in LLM mode:
 
+    0. Daily limit: has the whole app spent today's budget? Then demo mode.
     1. Spend guard: has this browser session used up its request allowance?
     2. Free repeat: was this exact request answered before? Then replay it.
     3. Read the contract once (first turn only): one structured-extraction
@@ -26,6 +27,7 @@ import anthropic
 
 from agent.config import Settings
 from agent.contract import LoadedContract
+from agent.daily_budget import DailyBudget
 from agent.cost import UsageMeter, format_usd
 from agent.demo import answer_demo_question, run_demo_analysis
 from agent.extraction import (
@@ -165,12 +167,16 @@ def read_notice(
     settings: Settings,
     agent: Any = None,
     cache: ResultCache | None = None,
+    budget: DailyBudget | None = None,
 ) -> Iterator[TraceEvent]:
     """The Notice Reader on its own (before an analysis): screenshot -> form values.
 
     The last event is kind="final" with detail={"reading": NoticeReading | None, "text": markdown}.
     The tenant confirms the values in the form; nothing is analysed yet.
     """
+    if agent is not None and budget is not None and budget.exhausted():
+        yield TraceEvent("info", "Daily AI budget used up: free demo mode", detail=budget.notice(), agent=NOTICE_READER)
+        agent = None
     try:
         image = load_notice_image(image_path, max_bytes=int(settings.max_upload_mb * 1_048_576))
     except (NoticeImageError, OSError) as exc:
@@ -200,16 +206,21 @@ def read_notice(
         return
     session.llm_requests += 1
 
-    reader = run_notice_reader(image, agent.client, settings, cache)
+    meter = UsageMeter(settings.model)
+    reader = run_notice_reader(image, agent.client, settings, cache, meter=meter)
     events: list[TraceEvent] = []
-    while True:
-        try:
-            event = next(reader)
-        except StopIteration as stop:
-            reading = stop.value
-            break
-        events.append(event)
-        yield event
+    try:
+        while True:
+            try:
+                event = next(reader)
+            except StopIteration as stop:
+                reading = stop.value
+                break
+            events.append(event)
+            yield event
+    finally:
+        if budget is not None:
+            budget.add(meter.guard_cost_usd)
     if reading is None:
         text = "**I couldn't read that screenshot.** Try a sharper image, or type the details into the form."
     else:
@@ -229,12 +240,20 @@ def run_turn(
     agent: Any = None,
     cache: ResultCache | None = None,
     meter: UsageMeter | None = None,
+    budget: DailyBudget | None = None,
 ) -> Iterator[TraceEvent]:
     """Run one turn and yield trace events; the last one is kind="final".
 
     `meter` lets the caller watch the running cost while the turn streams
     (the website's cost ticker); by default the turn makes its own.
+    `budget` is the app-wide daily limit: when it is used up the turn runs in
+    demo mode, and every Claude call this turn makes is added to it.
     """
+    # 0. The app-wide daily limit (all visitors together).
+    if agent is not None and budget is not None and budget.exhausted():
+        yield TraceEvent("info", "Daily AI budget used up: free demo mode", detail=budget.notice())
+        agent = None
+
     if agent is None:   # demo mode: free, deterministic, no limits needed
         ctx = ToolContext(contract_text=session.contract_text, today=today, inputs=inputs)
         stream = run_demo_analysis(ctx, inputs) if analyze else answer_demo_question(user_text, ctx)
@@ -272,6 +291,18 @@ def run_turn(
 
     session.llm_requests += 1
     meter = meter if meter is not None else UsageMeter(settings.model)
+    try:
+        yield from _run_llm_turn(session, content, key, inputs=inputs, today=today, settings=settings, agent=agent,
+                                  cache=cache, meter=meter)
+    finally:
+        if budget is not None:
+            budget.add(meter.guard_cost_usd)
+
+
+def _run_llm_turn(session: Session, content: Any, key: str | None, *, inputs: TenantInputs, today: date,
+                  settings: Settings, agent: Any, cache: ResultCache | None,
+                  meter: UsageMeter) -> Iterator[TraceEvent]:
+    """Steps 3 to 5 of run_turn (the part that calls Claude)."""
     events: list[TraceEvent] = []
 
     # 3. Read the contract once.
